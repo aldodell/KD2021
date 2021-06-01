@@ -247,7 +247,7 @@ class KDVisualContainerComponent extends KDVisualComponent {
 
 /**
  * This function join properties from objects passed as arguments
- * @param {*} objects 
+ * @param {*} Object Object will be joined. 
  * @returns object with all properties. Last objects will override first objects properties on result object.
  */
 function KDJoiner(objects) {
