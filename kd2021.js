@@ -123,7 +123,7 @@ class KDComponent extends KDObject {
         this.getValue = function () { return this.dom.value }
 
         /** Get an object with name and value properties */
-        this.getObject = function() {var o={}; o[this.name] = this.getValue(); return o}
+        this.getObject = function () { var o = {}; o[this.name] = this.getValue(); return o }
 
         /** Set name field. Used with binder works */
         this.setName = function (name) { this.name = name; return this }
@@ -146,7 +146,7 @@ class KDComponent extends KDObject {
 
         //Component name. It used to identify the component for binders works
         this.name = "$0";
-        
+
         //Check properties nullity
         if (properties == undefined) properties = {};
 
@@ -273,31 +273,31 @@ function KDBinder(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "div";
     var vcc = new KDVisualContainerComponent(properties);
+    vcc.data = {}
 
     vcc.setValues = function (data) {
+        vcc.data = data;
         for (let c of vcc.components) {
             if (data[c.name] != undefined) { c.setValue(data[c.name]) }
         }
         return vcc;
     }
 
-    vcc.dataChanged = function (component) {return component.getObject()}
-    vcc.setDataChangedHandler = function(code) {vcc.dataChanged=code; return vcc}
-
-    vcc.wrapSuper = vcc.wrap;
-    vcc.wrap = function (objs) {
-        if (Array.isArray(objs)) {
-            for (var c of objs) {
-                vcc.wrapSuper(c);
-                c.dom.addEventListener("change", function(){vcc.dataChanged(c)})
-            }
-        } else {
-            vcc.wrapSuper(objs);
-            objs.dom.addEventListener("change", function(){vcc.dataChanged(objs)})
-        
+    vcc.dataChanged = function (object) { }
+    /** 
+     * Assign a function with an only parameter data to retrieve changes when user modify data
+     *  */
+    vcc.bind = function (dataChangedCode) {
+        for (let c of vcc.components) {
+            c.setChangeHandler(function () {
+                vcc.data[c.name] = c.getValue();
+                vcc.dataChanged(vcc.data);
+            });
         }
+        vcc.dataChanged = dataChangedCode;
         return vcc;
     }
+
 
 
     return vcc;

@@ -128,8 +128,8 @@
                 .setName("campo3")
 
         ])
-            .setValues({ "campo2": "Hola" })
-            .setDataChangedHandler(function (c) { alert(c.name) })
+            .setValues({ "campo2": "Hola", "campo1": "abc", "campo3" : "mundo" })
+            .bind(function(obj){alert(JSON.stringify(obj))})
             .sendToBody();
 
     }
