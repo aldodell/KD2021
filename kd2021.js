@@ -162,6 +162,9 @@ class KDComponent extends KDObject {
         //Create DOM
         this.dom = document.createElement(this.htmlClass);
 
+        //Check some common properties
+        if (this.value) this.dom.value = this.value;
+
 
     }
 }
@@ -179,6 +182,7 @@ class KDVisualComponent extends KDComponent {
             this.dom.style[s] = this.style[s];
         }
 
+        this.px = function (pixels) { return pixels + "px" }
 
         var height = 20;
         var width = 100;
@@ -194,6 +198,7 @@ class KDVisualComponent extends KDComponent {
             if (value > maxHeight) value = maxHeight;
             if (value < minHeight) value = minHeight;
             height = value;
+            this.dom.style.height = this.px(value);
         }
 
 
@@ -201,14 +206,15 @@ class KDVisualComponent extends KDComponent {
             if (value > maxWidth) value = maxWidth;
             if (value < minWidth) value = minWidth;
             width = value;
+            this.dom.style.width = this.px(value);
         }
 
         this.setTop = function (value) {
-            this.dom.style.top = value + "px";
+            this.dom.style.top = this.px(value);
         }
 
         this.setLeft = function (value) {
-            this.dom.style.left = value + "px";
+            this.dom.style.left = this.px(value);
         }
 
 
@@ -222,44 +228,60 @@ class KDVisualContainerComponent extends KDVisualComponent {
         super(properties);
         this.components = [];
 
-        this.wrap = function (obj) {
-            if (Array.isArray(obj)) {
-                for (let o of obj) {
-                    this.dom.appendChild(o.dom);
-                    this.components.push(o);
+        this.wrap = function () {
+            for (let obj of arguments) {
+                if (Array.isArray(obj)) {
+                    for (let o in obj) {
+                        this.dom.appendChild(o.dom);
+                        this.components.push(o);
+                    }
+                } else {
+                    this.dom.appendChild(obj.dom)
+                    this.components.push(obj);
                 }
-            } else {
-                this.dom.appendChild(obj.dom)
-                this.components.push(obj);
             }
             return this;
         }
     }
+}
 
+/**
+ * This function join properties from objects passed as arguments
+ * @param {*} objects 
+ * @returns object with all properties. Last objects will override first objects properties on result object.
+ */
+function KDJoiner(objects) {
+    var r = {}
+    for (let o of arguments) {
+        for (let p in o) {
+            r[p] = o[p];
+        }
+    }
+    return r;
 }
 
 
-/** Return a object with style object inside and styles properties passed through
- * Example: KDButton(KDStyler("backgroundColor", "red", "margin", "2px"))
+/** 
+ * Return a object with style object inside and styles properties passed through
+ * Example: KDButton(KDStyler({"backgroundColor":"red", "margin", "2px"}))
  */
 function KDStyler(args) {
-    var i = 0;
-    var obj = {};
-    var style = {};
-    for (i = 0; i < arguments.length; i += 2) {
-        let p = arguments[i];
-        let v = arguments[i + 1];
-        style[p] = v;
+    var r = {};
+    for (let p of arguments) {
+        for (let n of Object.keys(p)) {
+            r[n] = p[n];
+        }
     }
-    obj["style"] = style;
-    return obj;
+    var z = {}
+    z.style = r;
+    return z;
 }
 
 
 /**
  * Function wich return a KDVisualContainerComponent object with DIV dom for populate with other KDs components
  * @param {*} properties 
- * @returns 
+ * @returns A KDVisualContainerComponent with DIV style.
  */
 function KDLayer(properties) {
     if (properties == undefined) properties = {};
@@ -284,9 +306,12 @@ function KDBinder(properties) {
     }
 
     vcc.dataChanged = function (object) { }
+
     /** 
      * Assign a function with an only parameter data to retrieve changes when user modify data
-     *  */
+     * Example:
+     * .bind(function(obj){alert(JSON.stringify(obj))})
+     * */
     vcc.bind = function (dataChangedCode) {
         for (let c of vcc.components) {
             c.setChangeHandler(function () {
@@ -297,11 +322,7 @@ function KDBinder(properties) {
         vcc.dataChanged = dataChangedCode;
         return vcc;
     }
-
-
-
     return vcc;
-
 }
 
 
@@ -339,16 +360,6 @@ function KDImage(properties) {
 
 
 
-function VStack(kdVisualComponents, properties) {
-    var y = 0;
-    var body = document.getElementsByTagName("body")[0];
-    kdVisualComponents.forEach(function (v) {
-        v.setTop(y);
-        body.appendChild(v);
-        y += v.height + v.verticalSeparation;
-    });
-
-}
 
 
 

@@ -7,141 +7,158 @@
 <script src="kd2021.js"></script>
 <script>
 
-    var kernel = new KDKernel();
+var buttonStyle = {"style":{"backgroundColor":"blue"}};
 
-    kernel.addApplication(Alive);
-    kernel.run();
-
-    var m = new KDMessage("Hola mundo", "x", "Al.*");
-    kernel.sendLocalMessage(m);
-
-
-
-    KDButton(
-        KDStyler("backgroundColor", "red", "left", "100px", "padding", "5px")
-    )
-        .setValue("Hello")
-        .addEvent("click", function () { alert("click") })
-        .sendToBody();
-
-
-    KDLayer()
+    KDBinder()
         .wrap(
-            [
-                KDButton()
-                    .setValue("Hola")
-                    .addEvent("click", function () { alert("hola") })
-                ,
+            KDTextField(KDStyler({"backgroundColor":"yellow", "height":"100px"})),
+            KDButton(KDJoiner(buttonStyle,{"value":"hola mundo"}))
 
-                KDButton()
-                    .setValue("Mundo")
-                    .addEvent("click", function () { alert("mundo") })
-
-            ]
         )
         .sendToBody();
 
-    KDLayer()
-        .wrap(
-            [
-                KDButton()
-                    .setValue("Hola")
-                    .addEvent("click", function () { alert("hola") })
-                ,
 
-                KDButton()
-                    .setValue("Mundo")
-                    .addEvent("click", function () { alert("mundo") })
 
-            ]
+    /*
+        var kernel = new KDKernel();
+        kernel.addApplication(Alive);
+        kernel.run();
+        var m = new KDMessage("Hola mundo", "x", "Al.*");
+        kernel.sendLocalMessage(m);
+    
+    
+    
+        KDButton(
+            KDJoiner(
+                KDStyler("backgroundColor", "red"),
+                {"value":"Hola mundo"}
+            )
+    
         )
-
-        .sendToBody();
-
-
-
-    KDLayer()
-        .wrap([
-
-            KDButton()
-                .setValue(7),
-
-            KDButton()
-                .setValue(8),
-
-            KDButton()
-                .setValue(9),
-
-
-        ])
-        .sendToBody();
-
-
-    KDLayer()
-        .wrap([
-
-            KDButton()
-                .setValue(4),
-
-            KDButton()
-                .setValue(5),
-
-            KDButton()
-                .setValue(6),
-
-
-        ])
-        .sendToBody();
-
-
-    KDLayer()
-        .wrap([
-
-            KDButton()
-                .setValue(1),
-
-            KDButton()
-                .setValue(2),
-
-            KDButton()
-                .setValue(3),
-
-
-        ])
-        .sendToBody();
-
-    var s = "";
-
-    for (i = 0; i < 5; i++) {
-
-        KDBinder().wrap([
-
-            KDTextField()
-                .setName("campo1")
-            ,
-
-            KDTextField()
-                .setName("campo2")
-            ,
-
-            KDTextField()
-                .setName("campo3")
-
-        ])
-            .setValues({ "campo2": "Hola", "campo1": "abc", "campo3" : "mundo" })
-            .bind(function(obj){alert(JSON.stringify(obj))})
+           // .setValue("Hello")
+            .addEvent("click", function () { alert("click") })
             .sendToBody();
-
-    }
-
-
-    KDLayer()
-        .wrap([
-            KDImage(KDStyler("height", "100px", "width", "100px"))
-                .setValue("http://elevenpartes.com/wp-includes/images/rss.png")
-        ]
-        )
-        .sendToBody();
+    
+    
+        KDLayer()
+            .wrap(
+                [
+                    KDButton()
+                        .setValue("Hola")
+                        .addEvent("click", function () { alert("hola") })
+                    ,
+    
+                    KDButton()
+                        .setValue("Mundo")
+                        .addEvent("click", function () { alert("mundo") })
+    
+                ]
+            )
+            .sendToBody();
+    
+        KDLayer()
+            .wrap(
+                [
+                    KDButton()
+                        .setValue("Hola")
+                        .addEvent("click", function () { alert("hola") })
+                    ,
+    
+                    KDButton()
+                        .setValue("Mundo")
+                        .addEvent("click", function () { alert("mundo") })
+    
+                ]
+            )
+    
+            .sendToBody();
+    
+    
+    
+        KDLayer()
+            .wrap([
+    
+                KDButton()
+                    .setValue(7),
+    
+                KDButton()
+                    .setValue(8),
+    
+                KDButton()
+                    .setValue(9),
+    
+    
+            ])
+            .sendToBody();
+    
+    
+        KDLayer()
+            .wrap([
+    
+                KDButton()
+                    .setValue(4),
+    
+                KDButton()
+                    .setValue(5),
+    
+                KDButton()
+                    .setValue(6),
+    
+    
+            ])
+            .sendToBody();
+    
+    
+        KDLayer()
+            .wrap([
+    
+                KDButton()
+                    .setValue(1),
+    
+                KDButton()
+                    .setValue(2),
+    
+                KDButton()
+                    .setValue(3),
+    
+    
+            ])
+            .sendToBody();
+    
+        var s = "";
+    
+        for (i = 0; i < 5; i++) {
+    
+            KDBinder().wrap([
+    
+                KDTextField()
+                    .setName("campo1")
+                ,
+    
+                KDTextField()
+                    .setName("campo2")
+                ,
+    
+                KDTextField()
+                    .setName("campo3")
+    
+            ])
+                .setValues({ "campo2": "Hola", "campo1": "abc", "campo3": "mundo" })
+                .bind(function (obj) { alert(JSON.stringify(obj)) })
+                .sendToBody();
+    
+    
+        }
+    
+    
+        KDLayer()
+            .wrap([
+                KDImage(KDStyler("height", "100px", "width", "100px"))
+                    .setValue("http://elevenpartes.com/wp-includes/images/rss.png")
+            ]
+            )
+            .sendToBody();
+            */
 
 
 
