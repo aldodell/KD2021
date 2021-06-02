@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<meta charset="UTF-8">
 <html>
 
 <body>
@@ -7,159 +8,27 @@
 <script src="kd2021.js"></script>
 <script>
 
-var buttonStyle = {"style":{"backgroundColor":"blue"}};
+    var theme0 = KDStyler({ "backgroundColor": "gold", "padding": "4px", "width": "3cm" })
+    var theme1 = KDStyler({ "display": "block", "width": "90%", "marginLeft": "auto", "marginRight": "auto" })
+    var theme2 = KDStyler({ "padding": "8px" })
 
-    KDBinder()
+    var data = { "name": "Ascensor de última generación con todos los juguetes", "price": "20$", "img": "http://elevenpartes.com/portal/images/i1.jpg" }
+    var q = KDBinder(theme0)
         .wrap(
-            KDTextField(KDStyler({"backgroundColor":"yellow", "height":"100px"})),
-            KDButton(KDJoiner(buttonStyle,{"value":"hola mundo"}))
+            KDImage(theme1)
+                .setName("img"),
+            KDLayer(theme2)
+                .setName("name"),
+            KDLayer(theme2)
+                .setName("price")
 
         )
+        .bind(data)
+        .setOnDataChanged(function (data) { alert(JSON.stringify(data)) })
         .sendToBody();
 
-
-
-    /*
-        var kernel = new KDKernel();
-        kernel.addApplication(Alive);
-        kernel.run();
-        var m = new KDMessage("Hola mundo", "x", "Al.*");
-        kernel.sendLocalMessage(m);
-    
-    
-    
-        KDButton(
-            KDJoiner(
-                KDStyler("backgroundColor", "red"),
-                {"value":"Hola mundo"}
-            )
-    
-        )
-           // .setValue("Hello")
-            .addEvent("click", function () { alert("click") })
-            .sendToBody();
-    
-    
-        KDLayer()
-            .wrap(
-                [
-                    KDButton()
-                        .setValue("Hola")
-                        .addEvent("click", function () { alert("hola") })
-                    ,
-    
-                    KDButton()
-                        .setValue("Mundo")
-                        .addEvent("click", function () { alert("mundo") })
-    
-                ]
-            )
-            .sendToBody();
-    
-        KDLayer()
-            .wrap(
-                [
-                    KDButton()
-                        .setValue("Hola")
-                        .addEvent("click", function () { alert("hola") })
-                    ,
-    
-                    KDButton()
-                        .setValue("Mundo")
-                        .addEvent("click", function () { alert("mundo") })
-    
-                ]
-            )
-    
-            .sendToBody();
-    
-    
-    
-        KDLayer()
-            .wrap([
-    
-                KDButton()
-                    .setValue(7),
-    
-                KDButton()
-                    .setValue(8),
-    
-                KDButton()
-                    .setValue(9),
-    
-    
-            ])
-            .sendToBody();
-    
-    
-        KDLayer()
-            .wrap([
-    
-                KDButton()
-                    .setValue(4),
-    
-                KDButton()
-                    .setValue(5),
-    
-                KDButton()
-                    .setValue(6),
-    
-    
-            ])
-            .sendToBody();
-    
-    
-        KDLayer()
-            .wrap([
-    
-                KDButton()
-                    .setValue(1),
-    
-                KDButton()
-                    .setValue(2),
-    
-                KDButton()
-                    .setValue(3),
-    
-    
-            ])
-            .sendToBody();
-    
-        var s = "";
-    
-        for (i = 0; i < 5; i++) {
-    
-            KDBinder().wrap([
-    
-                KDTextField()
-                    .setName("campo1")
-                ,
-    
-                KDTextField()
-                    .setName("campo2")
-                ,
-    
-                KDTextField()
-                    .setName("campo3")
-    
-            ])
-                .setValues({ "campo2": "Hola", "campo1": "abc", "campo3": "mundo" })
-                .bind(function (obj) { alert(JSON.stringify(obj)) })
-                .sendToBody();
-    
-    
-        }
-    
-    
-        KDLayer()
-            .wrap([
-                KDImage(KDStyler("height", "100px", "width", "100px"))
-                    .setValue("http://elevenpartes.com/wp-includes/images/rss.png")
-            ]
-            )
-            .sendToBody();
-            */
-
+    q.sendToBody();
+    q.sendToBody();
 
 
 </script>

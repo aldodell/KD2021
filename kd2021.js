@@ -4,8 +4,14 @@ var KD_ALL = ".*";
 
 /** Base class of Kicsy obects */
 class KDObject {
-    constructor() {
+    constructor(properties) {
+        //Check properties nullity
+        if (properties == undefined) properties = {};
 
+        //process each property
+        for (var p in properties) {
+            this[p] = properties[p];
+        }
     }
 }
 
@@ -109,7 +115,7 @@ class KDUser {
 /** Component base class */
 class KDComponent extends KDObject {
     constructor(properties) {
-        super();
+        super(properties);
 
         var it = this;
 
@@ -147,13 +153,7 @@ class KDComponent extends KDObject {
         //Component name. It used to identify the component for binders works
         this.name = "$0";
 
-        //Check properties nullity
-        if (properties == undefined) properties = {};
 
-        //process each property
-        for (var p in properties) {
-            this[p] = properties[p];
-        }
 
 
         //Check html class
@@ -169,6 +169,8 @@ class KDComponent extends KDObject {
     }
 }
 
+var KDDefaultGraphicUnit = "px";
+
 /** Visual component class base */
 class KDVisualComponent extends KDComponent {
     constructor(properties) {
@@ -182,39 +184,32 @@ class KDVisualComponent extends KDComponent {
             this.dom.style[s] = this.style[s];
         }
 
-        this.px = function (pixels) { return pixels + "px" }
 
-        var height = 20;
-        var width = 100;
-        var minHeight = 20;
-        var minWidth = 100;
-        var maxHeight = 20;
-        var maxWidth = 100;
-        var verticalSeparation = 2;
-        var horizontalSeparation = 2;
+        this.suffixGraphicUnit = function (pixels) { return pixels + KDDefaultGraphicUnit }
+
+        this.height = 20;
+        this.width = 100;
 
 
         this.setHeight = function (value) {
-            if (value > maxHeight) value = maxHeight;
-            if (value < minHeight) value = minHeight;
-            height = value;
-            this.dom.style.height = this.px(value);
+            this.height = value;
+            this.dom.style.height = this.suffixGraphicUnit(value);
+            return this;
         }
-
-
         this.setWidth = function (value) {
-            if (value > maxWidth) value = maxWidth;
-            if (value < minWidth) value = minWidth;
-            width = value;
-            this.dom.style.width = this.px(value);
+            this.width = value;
+            this.dom.style.width = this.suffixGraphicUnit(value);
+            return this;
         }
 
         this.setTop = function (value) {
-            this.dom.style.top = this.px(value);
+            this.dom.style.top = this.suffixGraphicUnit(value);
+            return this;
         }
 
         this.setLeft = function (value) {
-            this.dom.style.left = this.px(value);
+            this.dom.style.left = this.suffixGraphicUnit(value);
+            return this;
         }
 
 
@@ -244,6 +239,13 @@ class KDVisualContainerComponent extends KDVisualComponent {
         }
     }
 }
+
+
+function KDTheme(properties) {
+
+}
+
+
 
 /**
  * This function join properties from objects passed as arguments
@@ -286,45 +288,57 @@ function KDStyler(args) {
 function KDLayer(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "div";
-    return new KDVisualContainerComponent(properties);
-
+    var vcc = new KDVisualContainerComponent(properties);
+    vcc.setValue = function (value) { vcc.dom.innerHTML = value; return vcc }
+    return vcc;
 }
 
 
 function KDBinder(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "div";
-    var vcc = new KDVisualContainerComponent(properties);
+    var vcc = KDLayer(properties);
     vcc.data = {}
+    vcc.onDataChanged = function (object) { }
 
-    vcc.setValues = function (data) {
-        vcc.data = data;
-        for (let c of vcc.components) {
-            if (data[c.name] != undefined) { c.setValue(data[c.name]) }
-        }
-        return vcc;
-    }
-
-    vcc.dataChanged = function (object) { }
 
     /** 
      * Assign a function with an only parameter data to retrieve changes when user modify data
      * Example:
-     * .bind(function(obj){alert(JSON.stringify(obj))})
+     * .setOnDataChanged(function(obj){alert(JSON.stringify(obj))})
      * */
-    vcc.bind = function (dataChangedCode) {
+    vcc.setOnDataChanged = function (code) { vcc.onDataChanged = code; return vcc }
+
+
+
+    /**
+     * Bind KDBinder with all its children components. Is recursive (with others inner KDBinder)
+     * @param {*} data 
+     * @returns 
+     */
+    vcc.bind = function (data, binder) {
+        vcc.data = data;
+        if (binder == undefined) binder = vcc;
         for (let c of vcc.components) {
-            c.setChangeHandler(function () {
-                vcc.data[c.name] = c.getValue();
-                vcc.dataChanged(vcc.data);
-            });
+            //Setting values from initial data
+            if (binder.data[c.name] != undefined) {
+                c.setValue(binder.data[c.name])
+                // bind on change event
+                c.dom.addEventListener("change", function () {
+                    binder.data[c.name] = c.getValue();
+                    binder.onDataChanged(binder.data);
+                });
+            }
+            // Bind children
+            if (c.bind != undefined) {
+                c.bind(binder.data, binder);
+            }
         }
-        vcc.dataChanged = dataChangedCode;
         return vcc;
     }
     return vcc;
 }
-
+/*
+ 
+        */
 
 /** Function return a Button  */
 function KDButton(properties) {
