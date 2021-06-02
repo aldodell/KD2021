@@ -8,27 +8,87 @@
 <script src="kd2021.js"></script>
 <script>
 
-    var theme0 = KDStyler({ "backgroundColor": "gold", "padding": "4px", "width": "3cm" })
-    var theme1 = KDStyler({ "display": "block", "width": "90%", "marginLeft": "auto", "marginRight": "auto" })
-    var theme2 = KDStyler({ "padding": "8px" })
+    var theme0 = {
+        "style": {
+            "backgroundColor": "gold",
+            "display": "flex"
+        }
+    }
+
+    var theme1 = {
+        "style": {
+            "width": "4cm",
+            "margin": "8px"
+        }
+    }
+
+    var theme2 = {
+        "style": {
+            "width": "99%",
+            "margin": "0 auto"
+        }
+    }
 
     var data = { "name": "Ascensor de última generación con todos los juguetes", "price": "20$", "img": "http://elevenpartes.com/portal/images/i1.jpg" }
-    var q = KDBinder(theme0)
+
+
+
+    KDBinder(theme0)
         .wrap(
-            KDImage(theme1)
-                .setName("img"),
-            KDLayer(theme2)
-                .setName("name"),
-            KDLayer(theme2)
-                .setName("price")
+            KDBinder(theme1)
+                .wrap(
+                    KDImage(theme2)
+                        .setName("img"),
+                    KDLayer()
+                        .setName("name"),
+                    KDLayer()
+                        .setName("price"),
+
+                ),
+            KDBinder(theme1)
+                .wrap(
+                    KDImage(theme2)
+                        .setName("img"),
+                    KDLayer()
+                        .setName("name"),
+                    KDLayer()
+                        .setName("price"),
+
+                )
+
+            ,
+            KDBinder(theme1)
+                .wrap(
+                    KDImage(theme2)
+                        .setName("img"),
+                    KDLayer()
+                        .setName("name"),
+                    KDLayer()
+                        .setName("price"),
+
+                )
+
+            ,
+            KDBinder(theme1)
+                .wrap(
+                    KDImage(theme2)
+                        .setName("img"),
+                    KDLayer()
+                        .setName("name"),
+                    KDLayer()
+                        .setName("price"),
+
+                )
+
+
 
         )
         .bind(data)
         .setOnDataChanged(function (data) { alert(JSON.stringify(data)) })
         .sendToBody();
 
-    q.sendToBody();
-    q.sendToBody();
+
+
 
 
 </script>
