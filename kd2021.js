@@ -153,9 +153,6 @@ class KDComponent extends KDObject {
         //Component name. It used to identify the component for binders works
         this.name = "$0";
 
-
-
-
         //Check html class
         if (this.htmlClass == null) { this.htmlClass = "div" }
 
@@ -336,9 +333,7 @@ function KDBinder(properties) {
     }
     return vcc;
 }
-/*
- 
-        */
+
 
 /** Function return a Button  */
 function KDButton(properties) {
@@ -369,12 +364,6 @@ function KDImage(properties) {
     vc.setValue = vc.setImageUrl;
     return vc;
 }
-
-
-
-
-
-
 
 
 /*********** */
