@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <html>
+<style>
+
+</style>
 
 <body>
 </body>
@@ -11,25 +15,39 @@
     var theme0 = {
         "style": {
             "backgroundColor": "gold",
-            "display": "flex"
+            "display": "flex",
+            "flexWrap": "wrap",
+            "alignItems": "center",
+            "justifyContent": "space-around"
+
         }
     }
 
     var theme1 = {
         "style": {
-            "width": "4cm",
+            "width": "3cm",
             "margin": "8px"
+
         }
     }
 
     var theme2 = {
         "style": {
-            "width": "99%",
-            "margin": "0 auto"
+            "width": "90%"
         }
     }
 
-    var data = { "name": "Ascensor de última generación con todos los juguetes", "price": "20$", "img": "http://elevenpartes.com/portal/images/i1.jpg" }
+    var theme3 = {
+        "style": {
+
+
+        }
+    }
+
+
+
+    var w = document.body.clientWidth + "px";
+    var data = { "name": "Ascensor de última generación con todos los juguetes", "price": "20$", "img": "i1.jpg", "width": w }
 
 
 
@@ -39,46 +57,54 @@
                 .wrap(
                     KDImage(theme2)
                         .setName("img"),
-                    KDLayer()
+                    KDLayer(theme3)
                         .setName("name"),
-                    KDLayer()
+                    KDLayer(theme3)
                         .setName("price"),
+                    KDLayer(theme3)
+                        .setName("width")
 
                 ),
             KDBinder(theme1)
                 .wrap(
                     KDImage(theme2)
                         .setName("img"),
-                    KDLayer()
+                    KDLayer(theme3)
                         .setName("name"),
-                    KDLayer()
+                    KDLayer(theme3)
                         .setName("price"),
+                    KDLayer(theme3)
+                        .setName("width")
 
-                )
-
-            ,
+                ),
             KDBinder(theme1)
                 .wrap(
                     KDImage(theme2)
                         .setName("img"),
-                    KDLayer()
+                    KDLayer(theme3)
                         .setName("name"),
-                    KDLayer()
+                    KDLayer(theme3)
                         .setName("price"),
+                    KDLayer(theme3)
+                        .setName("width")
 
-                )
+                ),
 
-            ,
             KDBinder(theme1)
                 .wrap(
                     KDImage(theme2)
                         .setName("img"),
-                    KDLayer()
+                    KDLayer(theme3)
                         .setName("name"),
-                    KDLayer()
+                    KDLayer(theme3)
                         .setName("price"),
+                    KDLayer(theme3)
+                        .setName("width")
 
                 )
+
+
+
 
 
 
@@ -92,5 +118,9 @@
 
 
 </script>
+
+<div style="width: 100%; background-color: blueviolet; font-size:32px">
+    abc
+</div>
 
 </html>
