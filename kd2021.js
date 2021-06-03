@@ -132,7 +132,7 @@ class KDComponent extends KDObject {
         this.getObject = function () { var o = {}; o[this.name] = this.getValue(); return o }
 
         /** Set name field. Used with binder works */
-        this.setName = function (name) { this.name = name; return this }
+        this.setName = function (name) { this.name = name; if (this.dom) { this.dom.name = name; } return this; }
 
         /**
          * Add an event handler to DOM. 
@@ -146,12 +146,18 @@ class KDComponent extends KDObject {
             return this;
         }
 
+        this.clone = function () {
+            let obj = Object.assign({}, this);
+            obj.dom = obj.dom.cloneNode(true);
+            return obj;
+        }
+
 
         /** Manage onChange event on HTML subaycent object */
         this.setChangeHandler = function (code) { this.addEvent("change", code); return this }
 
         //Component name. It used to identify the component for binders works
-        this.name = "$0";
+        this.name = "";
 
         //Check html class
         if (this.htmlClass == null) { this.htmlClass = "div" }
@@ -224,15 +230,35 @@ class KDVisualContainerComponent extends KDVisualComponent {
             for (let obj of arguments) {
                 if (Array.isArray(obj)) {
                     for (let o in obj) {
-                        this.dom.appendChild(o.dom);
+                        if (this.dom.contains(o.dom)) {
+                            this.dom.appendChild(o.dom.cloneNode(true));
+                        } else {
+                            this.dom.appendChild(o.dom);
+                        }
                         this.components.push(o);
+
                     }
                 } else {
-                    this.dom.appendChild(obj.dom)
+                    if (this.dom.contains(obj.dom)) {
+                        this.dom.appendChild(obj.dom.cloneNode(true));
+                    } else {
+                        this.dom.appendChild(obj.dom);
+                    }
                     this.components.push(obj);
                 }
             }
             return this;
+        }
+
+
+        this.clone = function () {
+            let obj = Object.assign({}, this);
+            obj.dom = obj.dom.cloneNode(true);
+            obj.components = [];
+            for (let comp of this.components) {
+                obj.components.push(comp.clone());
+            }
+            return obj;
         }
     }
 }
@@ -296,7 +322,6 @@ function KDBinder(properties) {
     vcc.data = {}
     vcc.onDataChanged = function (object) { }
 
-
     /** 
      * Assign a function with an only parameter data to retrieve changes when user modify data
      * Example:
@@ -304,15 +329,13 @@ function KDBinder(properties) {
      * */
     vcc.setOnDataChanged = function (code) { vcc.onDataChanged = code; return vcc }
 
-
-
     /**
      * Bind KDBinder with all its children components. Is recursive (with others inner KDBinder)
      * @param {*} data 
      * @returns 
      */
     vcc.bind = function (data, binder) {
-        vcc.data = data;
+        if (data != undefined) vcc.data = data;
         if (binder == undefined) binder = vcc;
         for (let c of vcc.components) {
             //Setting values from initial data
@@ -331,7 +354,97 @@ function KDBinder(properties) {
         }
         return vcc;
     }
+
+    vcc.setValues = function (data, binder) {
+        if (binder == undefined) binder = vcc;
+        for (let c of vcc.components) {
+            //Setting values from initial data
+            if (binder.data[c.name] != undefined) {
+                c.setValue(binder.data[c.name])
+            }
+
+            if (c.bind != undefined) {
+                c.setValue(binder.data, binder);
+            }
+        }
+    }
+
+
     return vcc;
+}
+
+function KDJsonAdapter(properties) {
+    var layer = KDLayer(properties);
+    layer.binder = {};
+
+    /** Set associated KDBinder */
+    layer.wrapBinder = function (binder) { layer.binder = binder; /* layer.wrap(binder); */ return layer; }
+
+    /**
+     * Create a list view from compoments defined.
+     * @param {[data]} arrayData Array of objects with data
+     */
+    layer.createList = function (arrayData) {
+        //Remove children
+        for (let child of layer.dom.childNodes) {
+            child.remove();
+        }
+        layer.components = [];
+
+        for (let row of arrayData) {
+            let newBinder = layer.binder.clone();
+            layer.wrap(newBinder);
+            newBinder.bind(row);
+
+
+        }
+        return layer;
+    }
+
+    layer.retrieveData = function () {
+        layer.data = [];
+        for (let binder of layer.components) {
+            var row = {}
+            for (component of binder.components) {
+                if (component.name != "") {
+                    row[component.name] = component.getValue();
+                }
+            }
+            layer.data.push(row);
+        }
+
+        return layer;
+    }
+
+    /** Load data from an URL and invoke createList method */
+    layer.load = function (url, method) {
+        if (method == undefined) method = "post";
+        var http_request = new XMLHttpRequest();
+        http_request.overrideMimeType('text/xml');
+        http_request.onreadystatechange = function () {
+            if (http_request.readyState == 4) {
+                if (http_request.status == 200) {
+                    var dataTable = eval(http_request.responseText);
+                    if (!Array.isArray(dataTable)) {
+                        dataTable = [dataTable];
+                    }
+                    layer.createList(dataTable);
+                } else {
+                    console.log("ERROR loading data from " + url);
+                }
+            }
+        };
+
+        http_request.open(method, url, true);
+        http_request.send();
+        return layer;
+
+    }
+
+
+
+
+    return layer;
 }
 
 

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<html>
+<style>
+
+</style>
+
+<body>
+
+
+
+    <script src="kd2021.js"></script>
+    <script>
+
+        var data = {};
+        var theme0 = KDStyler({ "backgroundColor": "LightSkyBlue", "margin": "8px" })
+
+        var adapter = KDJsonAdapter()
+            .wrapBinder(
+                KDBinder()
+                    .wrap(
+                        KDTextField(theme0)
+                            .setName("id"),
+                        KDTextField(theme0)
+                            .setName("categoria")
+
+                    )
+            )
+
+            .load("categorias.php")
+            .sendToBody();
+
+        KDButton()
+            .setValue("get")
+            .addEvent("click", function () {
+                adapter.retrieveData();
+                alert(JSON.stringify(adapter.data));
+            })
+            .sendToBody();
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </script>
+</body>
+
+</html>
