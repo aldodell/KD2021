@@ -393,8 +393,13 @@ function KDJsonAdapter(properties) {
 
         for (let row of arrayData) {
             let newBinder = layer.binder.clone();
+            // layer.wrap(newBinder);
+            // layer.dom.appendChild(newBinder.dom);
+            //layer.components.push(newBinder);
             layer.wrap(newBinder);
             newBinder.bind(row);
+
+
 
 
         }

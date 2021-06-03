@@ -13,7 +13,7 @@
     <script src="kd2021.js"></script>
     <script>
 
-        var data = {};
+        var data = { "id": "100", "categoria": "a", "id": "101", "categoria": "b", "id": "102", "categoria": "c" };
         var theme0 = KDStyler({ "backgroundColor": "LightSkyBlue", "margin": "8px" })
 
         var adapter = KDJsonAdapter()
@@ -26,10 +26,13 @@
                             .setName("categoria")
 
                     )
+                // .bind(data)
             )
 
+
+            .sendToBody()
             .load("categorias.php")
-            .sendToBody();
+        
 
         KDButton()
             .setValue("get")
