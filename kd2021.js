@@ -7,8 +7,8 @@ var KD_ID = 0;
 class KDObject {
     constructor(properties) {
 
-        this.createId = function () { this.id = "KD_" + (++KD_ID); }
-        this.createId();
+        this.getId = function () { this.id = "KD_" + (++KD_ID); }
+        this.getId();
 
         //Check properties nullity
         if (properties == undefined) properties = {};
@@ -162,7 +162,7 @@ class KDComponent extends KDObject {
 
 
 
-        this.eventHandlers = [];
+      
         /**
          * Add an event handler to DOM. 
          * @param {String} eventType String wich represents event name like "click"
@@ -172,13 +172,13 @@ class KDComponent extends KDObject {
         this.addEvent = function (eventType, code) {
             var comp = this;
             this.dom.addEventListener(eventType, function () { code(comp) });
-            this.eventHandlers.push({ eventType: code });
+           
             return this;
         }
 
         this.clone = function () {
             let obj = this.completeAssign({}, this);
-            obj.createId();
+            obj.getId();
             obj.dom = obj.dom.cloneNode(true);
             obj.dom.id = obj.id;
             /*
@@ -283,14 +283,9 @@ class KDVisualContainerComponent extends KDVisualComponent {
         this.clone = function () {
             let obj = this.completeAssign({}, this);
             obj.dom = obj.dom.cloneNode(false);
-            obj.createId();
+            obj.getId();
             obj.dom.id = obj.id;
             obj.components = [];
-            /*
-            for (e of this.eventHandlers) {
-                obj.addEvent(e.eventType, e.code);
-            }
-            */
             for (let comp of this.components) {
                 obj.wrap(comp.clone());
             }
@@ -317,9 +312,7 @@ class KDVisualContainerComponent extends KDVisualComponent {
 }
 
 
-function KDTheme(properties) {
 
-}
 
 
 
