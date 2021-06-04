@@ -13,9 +13,96 @@
     <script src="kd2021.js"></script>
     <script>
 
-        var data = { "id": "100", "categoria": "a", "id": "101", "categoria": "b", "id": "102", "categoria": "c" };
-        var theme0 = KDStyler({ "backgroundColor": "LightSkyBlue", "margin": "8px" })
+        var theme0 = KDStyler({ 
+            "backgroundColor": "LightSkyBlue", 
+        "margin": "8px",
+        "fontSize": "28px"
+    
+    });
+        
 
+
+var adapter = KDJsonAdapter()
+.wrapBinder(
+    KDBinder()
+    .wrap(
+        KDTextField(theme0)
+        .setName("categoria"),
+        KDTextField(theme0)
+        .setName("id")
+
+    )
+)
+
+.load("categorias.php")
+.sendToBody();
+
+
+KDButton()
+            .setValue("get")
+            .addEvent("click", function () {
+                adapter.getData();
+                alert(JSON.stringify(adapter.arrayData));
+            })
+            .sendToBody();
+
+
+
+
+/*
+
+var data = [{ "id": "100", "categoria": "a"}, {"id": "101", "categoria": "b"}, {"id": "102", "categoria": "c" }];
+        
+KDBinder()
+.wrap(
+    KDTextField(theme0)
+    .setName("id"),
+    KDTextField(theme0)
+    .setName("categoria"),
+
+)
+.sendToBody()
+.bind(data[0])
+.setOnDataChanged(function(data) {alert(JSON.stringify(data))});
+
+
+KDBinder()
+.wrap(
+    KDTextField(theme0)
+    .setName("id"),
+    KDTextField(theme0)
+    .setName("categoria"),
+
+)
+.sendToBody()
+.bind(data[1])
+.setOnDataChanged(function(data) {alert(JSON.stringify(data))});
+
+
+
+
+var binder = KDBinder()
+.wrap(
+    KDTextField(theme0)
+    .setName("id"),
+    KDTextField(theme0)
+    .setName("categoria"),
+
+)
+.sendToBody()
+.setOnDataChanged(function(data) {alert(JSON.stringify(data))});
+
+binder.bind(data[2]);
+
+
+
+
+var binder2 = binder.clone();
+binder2.sendToBody();
+
+
+
+        /*
         var adapter = KDJsonAdapter()
             .wrapBinder(
                 KDBinder()
@@ -24,15 +111,14 @@
                             .setName("id"),
                         KDTextField(theme0)
                             .setName("categoria")
+                            
 
                     )
-                // .bind(data)
+                    .setOnDataChanged(function(d){alert(JSON.stringify(d))})
             )
-
-
             .sendToBody()
-            .load("categorias.php")
-        
+            .load("categorias.php");
+
 
         KDButton()
             .setValue("get")
@@ -41,7 +127,7 @@
                 alert(JSON.stringify(adapter.data));
             })
             .sendToBody();
-
+*/
 
 
 

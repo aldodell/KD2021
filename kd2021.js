@@ -267,7 +267,7 @@ class KDVisualContainerComponent extends KDVisualComponent {
         this.wrap = function () {
             for (let obj of arguments) {
                 if (Array.isArray(obj)) {
-                    for (let o in obj) {
+                    for (let o of obj) {
                         this.dom.appendChild(o.dom);
                         this.components.push(o);
                     }
@@ -399,7 +399,7 @@ function KDBinder(properties) {
                 c.dom.addEventListener("change", function () {
                     binder.data[c.name] = c.getValue();
                     binder.onDataChanged(binder.data);
-                }); 
+                });
             }
             // Bind children
             if (c.bind != undefined) {
@@ -423,6 +423,13 @@ function KDBinder(properties) {
         }
     }
 
+    vcc.clone = function () {
+        let vcc2 = KDBinder(properties);
+        for (c of vcc.components) {
+            vcc2.wrap(c.clone())
+        }
+        return vcc2;
+    }
 
     return vcc;
 }
@@ -430,7 +437,7 @@ function KDBinder(properties) {
 function KDJsonAdapter(properties) {
     var layer = KDLayer(properties);
     layer.binder = {};
-    layer.arrayDate = [];
+    layer.arrayData = [];
 
     /** Set associated KDBinder */
     layer.wrapBinder = function (binder) { layer.binder = binder; /* layer.wrap(binder); */ return layer; }
@@ -478,12 +485,20 @@ function KDJsonAdapter(properties) {
 
         for (let i = 0; i < layer.arrayData.length; i++) {
             let record = layer.arrayData[i];
-            let c = layer.components[i];
-           // console.log(c.bind);
-            c.bind(record);
+            let binder = layer.components[i];
+            binder.bind(record, binder);
         }
 
         return layer;
+    }
+
+    layer.getData = function () {
+        var r = [];
+        for (let b of layer.components) {
+            r.push(b.data);
+        }
+        layer.arrayData = r;
+        return r;
     }
 
     return layer;
