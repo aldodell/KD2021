@@ -1,10 +1,15 @@
 
 var KD_ALL = ".*";
+var KD_ID = 0;
 
 
 /** Base class of Kicsy obects */
 class KDObject {
     constructor(properties) {
+
+        this.createId = function () { this.id = "KD_" + (++KD_ID); }
+        this.createId();
+
         //Check properties nullity
         if (properties == undefined) properties = {};
 
@@ -12,6 +17,27 @@ class KDObject {
         for (var p in properties) {
             this[p] = properties[p];
         }
+
+
+        // This is an assign function that copies full descriptors
+        this.completeAssign = function completeAssign(target, ...sources) {
+            sources.forEach(source => {
+                let descriptors = Object.keys(source).reduce((descriptors, key) => {
+                    descriptors[key] = Object.getOwnPropertyDescriptor(source, key);
+                    return descriptors;
+                }, {});
+                // by default, Object.assign copies enumerable Symbols too
+                Object.getOwnPropertySymbols(source).forEach(sym => {
+                    let descriptor = Object.getOwnPropertyDescriptor(source, sym);
+                    if (descriptor.enumerable) {
+                        descriptors[sym] = descriptor;
+                    }
+                });
+                Object.defineProperties(target, descriptors);
+            });
+            return target;
+        }
+
     }
 }
 
@@ -134,6 +160,9 @@ class KDComponent extends KDObject {
         /** Set name field. Used with binder works */
         this.setName = function (name) { this.name = name; if (this.dom) { this.dom.name = name; } return this; }
 
+
+
+        this.eventHandlers = [];
         /**
          * Add an event handler to DOM. 
          * @param {String} eventType String wich represents event name like "click"
@@ -143,12 +172,20 @@ class KDComponent extends KDObject {
         this.addEvent = function (eventType, code) {
             var comp = this;
             this.dom.addEventListener(eventType, function () { code(comp) });
+            this.eventHandlers.push({ eventType: code });
             return this;
         }
 
         this.clone = function () {
-            let obj = Object.assign({}, this);
+            let obj = this.completeAssign({}, this);
+            obj.createId();
             obj.dom = obj.dom.cloneNode(true);
+            obj.dom.id = obj.id;
+            /*
+             for (let e of this.eventHandlers) {
+                 obj.addEvent(e.eventType, e.code);
+             }
+             */
             return obj;
         }
 
@@ -164,6 +201,7 @@ class KDComponent extends KDObject {
 
         //Create DOM
         this.dom = document.createElement(this.htmlClass);
+        this.dom.id = this.id;
 
         //Check some common properties
         if (this.value) this.dom.value = this.value;
@@ -230,20 +268,11 @@ class KDVisualContainerComponent extends KDVisualComponent {
             for (let obj of arguments) {
                 if (Array.isArray(obj)) {
                     for (let o in obj) {
-                        if (this.dom.contains(o.dom)) {
-                            this.dom.appendChild(o.dom.cloneNode(true));
-                        } else {
-                            this.dom.appendChild(o.dom);
-                        }
+                        this.dom.appendChild(o.dom);
                         this.components.push(o);
-
                     }
                 } else {
-                    if (this.dom.contains(obj.dom)) {
-                        this.dom.appendChild(obj.dom.cloneNode(true));
-                    } else {
-                        this.dom.appendChild(obj.dom);
-                    }
+                    this.dom.appendChild(obj.dom);
                     this.components.push(obj);
                 }
             }
@@ -252,13 +281,37 @@ class KDVisualContainerComponent extends KDVisualComponent {
 
 
         this.clone = function () {
-            let obj = Object.assign({}, this);
-            obj.dom = obj.dom.cloneNode(true);
+            let obj = this.completeAssign({}, this);
+            obj.dom = obj.dom.cloneNode(false);
+            obj.createId();
+            obj.dom.id = obj.id;
             obj.components = [];
+            /*
+            for (e of this.eventHandlers) {
+                obj.addEvent(e.eventType, e.code);
+            }
+            */
             for (let comp of this.components) {
-                obj.components.push(comp.clone());
+                obj.wrap(comp.clone());
             }
             return obj;
+        }
+
+
+        /**
+         * Clear a node in specific position or all children if position==undefined
+         * @param {Int} position 
+         */
+        this.clear = function (position) {
+            if (position == undefined) {
+                this.components = [];
+                for (let d of this.dom.childNodes) {
+                    d.remove();
+                }
+            } else {
+                this.components.splice(position, 1);
+                this.dom.childNodes[position].remove();
+            }
         }
     }
 }
@@ -340,12 +393,13 @@ function KDBinder(properties) {
         for (let c of vcc.components) {
             //Setting values from initial data
             if (binder.data[c.name] != undefined) {
+                console.log(c.id);
                 c.setValue(binder.data[c.name])
                 // bind on change event
                 c.dom.addEventListener("change", function () {
                     binder.data[c.name] = c.getValue();
                     binder.onDataChanged(binder.data);
-                });
+                }); 
             }
             // Bind children
             if (c.bind != undefined) {
@@ -376,50 +430,10 @@ function KDBinder(properties) {
 function KDJsonAdapter(properties) {
     var layer = KDLayer(properties);
     layer.binder = {};
+    layer.arrayDate = [];
 
     /** Set associated KDBinder */
     layer.wrapBinder = function (binder) { layer.binder = binder; /* layer.wrap(binder); */ return layer; }
-
-    /**
-     * Create a list view from compoments defined.
-     * @param {[data]} arrayData Array of objects with data
-     */
-    layer.createList = function (arrayData) {
-        //Remove children
-        for (let child of layer.dom.childNodes) {
-            child.remove();
-        }
-        layer.components = [];
-
-        for (let row of arrayData) {
-            let newBinder = layer.binder.clone();
-            // layer.wrap(newBinder);
-            // layer.dom.appendChild(newBinder.dom);
-            //layer.components.push(newBinder);
-            layer.wrap(newBinder);
-            newBinder.bind(row);
-
-
-
-
-        }
-        return layer;
-    }
-
-    layer.retrieveData = function () {
-        layer.data = [];
-        for (let binder of layer.components) {
-            var row = {}
-            for (component of binder.components) {
-                if (component.name != "") {
-                    row[component.name] = component.getValue();
-                }
-            }
-            layer.data.push(row);
-        }
-
-        return layer;
-    }
 
     /** Load data from an URL and invoke createList method */
     layer.load = function (url, method) {
@@ -429,11 +443,12 @@ function KDJsonAdapter(properties) {
         http_request.onreadystatechange = function () {
             if (http_request.readyState == 4) {
                 if (http_request.status == 200) {
-                    var dataTable = eval(http_request.responseText);
-                    if (!Array.isArray(dataTable)) {
-                        dataTable = [dataTable];
+                    var arrayData = JSON.parse(http_request.responseText);
+                    if (!Array.isArray(arrayData)) {
+                        arrayData = [arrayData];
                     }
-                    layer.createList(dataTable);
+                    layer.arrayData = arrayData;
+                    layer.createList();
                 } else {
                     console.log("ERROR loading data from " + url);
                 }
@@ -447,7 +462,29 @@ function KDJsonAdapter(properties) {
     }
 
 
+    layer.insertRecord = function () {
+        let newBinder = layer.binder.clone();
+        layer.wrap(newBinder);
+        return layer;
+    }
 
+
+    layer.createList = function () {
+        layer.clear();
+
+        for (let i = 0; i < layer.arrayData.length; i++) {
+            layer.insertRecord();
+        }
+
+        for (let i = 0; i < layer.arrayData.length; i++) {
+            let record = layer.arrayData[i];
+            let c = layer.components[i];
+           // console.log(c.bind);
+            c.bind(record);
+        }
+
+        return layer;
+    }
 
     return layer;
 }
