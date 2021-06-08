@@ -472,15 +472,38 @@ class KDServerBridge extends KDObject {
     }
 }
 
+/**
+ * Return a FormData object joining all FromData passed as arguments
+ * @param {[FromData]} data 
+ * @returns FormData
+ */
+function KDDataJoiner(data) {
+    var r = new FormData();
+    for (let d of arguments) {
+        for (p of d.entries()) {
+            r.append(p[0], p[1]);
+        }
+    }
+    return r;
+}
+
 function KDJsonAdapter(properties) {
     var layer = KDLayer(properties);
     layer.binder = {};
     layer.arrayData = [];
+    layer.extraData = new FormData();
 
     /** Set associated KDBinder */
-    layer.wrapBinder = function (binder) { layer.binder = binder; /* layer.wrap(binder); */ return layer; }
+    layer.wrapBinder = function (binder) { layer.binder = binder; return layer; }
 
-    /** Load data from an URL and invoke createList method */
+    /**
+     * Load data from an URL and invoke createList method
+     * @param {*} url 
+     * @param {*} method 
+     * @param {*} success_callback 
+     * @param {*} error_callback 
+     * @returns 
+     */
     layer.load = function (url, method, success_callback, error_callback,) {
         var bridge = new KDServerBridge(url, "", function (response) {
             var arrayData = JSON.parse(response);
@@ -491,7 +514,9 @@ function KDJsonAdapter(properties) {
             layer.createList();
             if (success_callback != undefined) success_callback();
         }, error_callback, method);
-        bridge.send();
+
+        bridge.send(layer.extraData);
+
         return layer;
     }
 
@@ -520,6 +545,7 @@ function KDJsonAdapter(properties) {
         //Formatting data
         var formData = new FormData();
         formData.append("arrayData", postData);
+        formData = KDDataJoiner(layer.extraData, formData);
 
         //Sending data:
         var bridge = new KDServerBridge(url, formData, success_callback, error_callback, method);
@@ -544,7 +570,7 @@ function KDJsonAdapter(properties) {
             layer.load(selectUrl, method);
             success_callback();
         }
-        bridge.send();
+        bridge.send(layer.extraData);
 
         return layer;
 
@@ -581,6 +607,28 @@ function KDJsonAdapter(properties) {
         layer.arrayData = r;
         return r;
     }
+
+      /**
+     * 
+     * @returns Clear extra data
+     */
+       layer.clearExtraData = function () {
+        layer.extraData = new FormData();
+        return layer;
+    }
+
+    /**
+     * 
+     * @param {*} key 
+     * @param {*} value 
+     * @returns 
+     */
+    layer.appendExtraData = function (key, value) {
+        layer.extraData.append(key, value);
+        return layer;
+    }
+
+   
 
     return layer;
 }
