@@ -162,7 +162,7 @@ class KDComponent extends KDObject {
 
 
 
-      
+
         /**
          * Add an event handler to DOM. 
          * @param {String} eventType String wich represents event name like "click"
@@ -172,7 +172,7 @@ class KDComponent extends KDObject {
         this.addEvent = function (eventType, code) {
             var comp = this;
             this.dom.addEventListener(eventType, function () { code(comp) });
-           
+
             return this;
         }
 
@@ -300,9 +300,7 @@ class KDVisualContainerComponent extends KDVisualComponent {
         this.clear = function (position) {
             if (position == undefined) {
                 this.components = [];
-                for (let d of this.dom.childNodes) {
-                    d.remove();
-                }
+                this.dom.innerHTML = "";
             } else {
                 this.components.splice(position, 1);
                 this.dom.childNodes[position].remove();
@@ -427,6 +425,53 @@ function KDBinder(properties) {
     return vcc;
 }
 
+
+class KDServerBridge extends KDObject {
+    constructor(url, data, success_callback, error_callback, method, mimeType) {
+        super();
+        this.url = url;
+        this.success_callback = success_callback;
+        this.error_callback = error_callback;
+        this.method = method;
+        this.mimeType = mimeType;
+        this.data = data;
+
+
+        this.send = function () {
+            //Get method
+            if (this.method == undefined) this.method = "post";
+
+            // Define mime
+            if (this.mimeType == undefined) this.mimeType = 'text/xml';
+
+            //Define callback
+            if (this.success_callback == undefined) this.success_callback = function (msg) { alert(msg); }
+            if (this.error_callback == undefined) this.error_callback = function (msg) { alert(msg); }
+
+            //Create request
+            var http_request = new XMLHttpRequest();
+            http_request.overrideMimeType(this.mimeType);
+
+            var ref = this;
+            //Manage request
+            http_request.onreadystatechange = function () {
+                if (http_request.readyState == 4) {
+                    if (http_request.status == 200) {
+                        ref.success_callback(http_request.responseText);
+                    } else {
+                        ref.error_callback("ERROR loading data from " + url);
+                        console.log("ERROR loading data from " + url);
+                    }
+                }
+            };
+
+            http_request.open(this.method, this.url, true);
+            http_request.send(this.data);
+
+        }
+    }
+}
+
 function KDJsonAdapter(properties) {
     var layer = KDLayer(properties);
     layer.binder = {};
@@ -436,27 +481,71 @@ function KDJsonAdapter(properties) {
     layer.wrapBinder = function (binder) { layer.binder = binder; /* layer.wrap(binder); */ return layer; }
 
     /** Load data from an URL and invoke createList method */
-    layer.load = function (url, method) {
-        if (method == undefined) method = "post";
-        var http_request = new XMLHttpRequest();
-        http_request.overrideMimeType('text/xml');
-        http_request.onreadystatechange = function () {
-            if (http_request.readyState == 4) {
-                if (http_request.status == 200) {
-                    var arrayData = JSON.parse(http_request.responseText);
-                    if (!Array.isArray(arrayData)) {
-                        arrayData = [arrayData];
-                    }
-                    layer.arrayData = arrayData;
-                    layer.createList();
-                } else {
-                    console.log("ERROR loading data from " + url);
-                }
+    layer.load = function (url, method, success_callback, error_callback,) {
+        var bridge = new KDServerBridge(url, "", function (response) {
+            var arrayData = JSON.parse(response);
+            if (!Array.isArray(arrayData)) {
+                arrayData = [arrayData];
             }
-        };
+            layer.arrayData = arrayData;
+            layer.createList();
+            if (success_callback != undefined) success_callback();
+        }, error_callback, method);
+        bridge.send();
+        return layer;
+    }
 
-        http_request.open(method, url, true);
-        http_request.send();
+
+    /**
+     * Send a request to server in order to save informatio
+     * @param {URL} url scrit to be executed
+     * @param {function(msg)} success_callback callback invoke when successful operation
+     * @param {function(msg)} error_callback {} callback invoke when error operation result.
+     * @param {int} position Position of row to save. Put undefined to save all data.
+     * @param {String} method Request methos: GET, POST, etc.
+     * @returns itself reference
+     */
+    layer.save = function (url, success_callback, error_callback, position, method) {
+
+        //Encoding data:
+        var postData = [];
+        if (position == undefined) {
+            postData = JSON.stringify(layer.arrayData);
+        } else {
+            postData = JSON.stringify(layer.arrayData[position]);
+        }
+        postData = window.btoa(postData);
+        console.log(postData);
+
+        //Formatting data
+        var formData = new FormData();
+        formData.append("arrayData", postData);
+
+        //Sending data:
+        var bridge = new KDServerBridge(url, formData, success_callback, error_callback, method);
+        bridge.send();
+
+        return layer;
+    }
+
+    /**
+     * Create a new record on database
+     * @param {string} insertUrl sql insert string
+     * @param {*} selectUrl sql select stametement string
+     * @param {*} formData data to be sended (Using FormData)
+     * @param {*} success_callback Callbacks when successfull
+     * @param {*} error_callback Callback when error
+     * @param {*} method Url method: POST, GET, etc.
+     * @returns 
+     */
+    layer.newRecord = function (insertUrl, selectUrl, formData, success_callback, error_callback, method) {
+        var bridge = new KDServerBridge(insertUrl, formData, success_callback, error_callback, method);
+        bridge.success_callback = function () {
+            layer.load(selectUrl, method);
+            success_callback();
+        }
+        bridge.send();
+
         return layer;
 
     }
@@ -467,7 +556,6 @@ function KDJsonAdapter(properties) {
         layer.wrap(newBinder);
         return layer;
     }
-
 
     layer.createList = function () {
         layer.clear();
