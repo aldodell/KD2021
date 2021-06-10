@@ -493,6 +493,27 @@ function KDJsonAdapter(properties) {
     layer.arrayData = [];
     layer.extraData = new FormData();
 
+    /**
+  * 
+  * @returns Clear extra data
+  */
+    layer.clearExtraData = function () {
+        layer.extraData = new FormData();
+        return layer;
+    }
+
+    /**
+     * 
+     * @param {*} key 
+     * @param {*} value 
+     * @returns 
+     */
+    layer.appendExtraData = function (key, value) {
+        layer.extraData.append(key, value);
+        return layer;
+    }
+
+
     /** Set associated KDBinder */
     layer.wrapBinder = function (binder) { layer.binder = binder; return layer; }
 
@@ -513,10 +534,9 @@ function KDJsonAdapter(properties) {
             layer.arrayData = arrayData;
             layer.createList();
             if (success_callback != undefined) success_callback();
+
         }, error_callback, method);
-
         bridge.send(layer.extraData);
-
         return layer;
     }
 
@@ -608,27 +628,6 @@ function KDJsonAdapter(properties) {
         return r;
     }
 
-      /**
-     * 
-     * @returns Clear extra data
-     */
-       layer.clearExtraData = function () {
-        layer.extraData = new FormData();
-        return layer;
-    }
-
-    /**
-     * 
-     * @param {*} key 
-     * @param {*} value 
-     * @returns 
-     */
-    layer.appendExtraData = function (key, value) {
-        layer.extraData.append(key, value);
-        return layer;
-    }
-
-   
 
     return layer;
 }
