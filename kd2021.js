@@ -422,6 +422,31 @@ function KDBinder(properties) {
         return vcc2;
     }
 
+
+    vcc.getCheckedValue = function (fieldCheckedName, fieldValueName) {
+        var checked = false;
+        var theValue = false;
+        for (let c of vcc.components) {
+            if (c.name == fieldCheckedName) {
+                checked = c.getValue();
+            }
+
+            if (c.name == fieldValueName) {
+                theValue = c.getValue();
+            }
+
+        }
+
+        if (checked) {
+            return theValue;
+        } else {
+            return null;
+        }
+
+
+    }
+
+
     return vcc;
 }
 
@@ -526,7 +551,7 @@ function KDJsonAdapter(properties) {
      * @returns 
      */
     layer.load = function (url, method, success_callback, error_callback,) {
-        var bridge = new KDServerBridge(url, "", function (response) {
+        var bridge = new KDServerBridge(url, layer.extraData, function (response) {
             var arrayData = JSON.parse(response);
             if (!Array.isArray(arrayData)) {
                 arrayData = [arrayData];
@@ -536,7 +561,7 @@ function KDJsonAdapter(properties) {
             if (success_callback != undefined) success_callback();
 
         }, error_callback, method);
-        bridge.send(layer.extraData);
+        bridge.send();
         return layer;
     }
 
@@ -560,7 +585,7 @@ function KDJsonAdapter(properties) {
             postData = JSON.stringify(layer.arrayData[position]);
         }
         postData = window.btoa(postData);
-        console.log(postData);
+        //console.log(postData);
 
         //Formatting data
         var formData = new FormData();
@@ -573,6 +598,31 @@ function KDJsonAdapter(properties) {
 
         return layer;
     }
+
+    /**
+     * Use to send request directly to server, like delete operations.
+     * Example:
+     * var ids = [1,3,5,7];
+     * adapter.send("url.domain.com", ids);
+     * @param {*} url 
+     * @param {*} values 
+     * @param {*} success_callback 
+     * @param {*} error_callback 
+     * @param {*} method 
+     */
+    layer.send = function (url, values, success_callback, error_callback, method) {
+
+        //Formatting data
+        var formData = new FormData();
+        formData.append("arrayData", values);
+        formData = KDDataJoiner(layer.extraData, formData);
+
+        //Sending data:
+        var bridge = new KDServerBridge(url, formData, success_callback, error_callback, method);
+        bridge.send();
+
+    }
+
 
     /**
      * Create a new record on database
@@ -591,7 +641,6 @@ function KDJsonAdapter(properties) {
             success_callback();
         }
         bridge.send(layer.extraData);
-
         return layer;
 
     }
@@ -619,6 +668,8 @@ function KDJsonAdapter(properties) {
         return layer;
     }
 
+
+
     layer.getData = function () {
         var r = [];
         for (let b of layer.components) {
@@ -627,6 +678,19 @@ function KDJsonAdapter(properties) {
         layer.arrayData = r;
         return r;
     }
+
+
+    layer.getCheckedValues = function (fieldChecked, fieldValue) {
+        var r = [];
+        for (let binder of layer.components) {
+            let v = binder.getCheckedValue(fieldChecked, fieldValue);
+            if (v != undefined) {
+                r.push(v);
+            }
+        }
+        return r;
+    }
+
 
 
     return layer;
@@ -662,6 +726,18 @@ function KDImage(properties) {
     vc.setValue = vc.setImageUrl;
     return vc;
 }
+
+function KDCheckBox(properties) {
+    if (properties == undefined) properties = {};
+    properties.htmlClass = "input";
+    properties.type = "checkbox";
+    var vc = new KDVisualComponent(properties);
+    vc.getValue = function () { return this.dom.checked }
+    vc.setValue = function (status) { this.dom.checked = status; return vc; }
+    return vc;
+
+}
+
 
 
 /*********** */
