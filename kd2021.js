@@ -38,6 +38,14 @@ class KDObject {
             return target;
         }
 
+        this.toBase64 = function (str) {
+            return window.btoa(encodeURIComponent(str));
+        }
+
+        this.fromBase64 = function (bin) {
+            return decodeURIComponent(window.atob(bin));
+        }
+
     }
 }
 
@@ -423,28 +431,44 @@ function KDBinder(properties) {
     }
 
 
-    vcc.getCheckedValue = function (fieldCheckedName, fieldValueName) {
-        var checked = false;
-        var theValue = false;
-        for (let c of vcc.components) {
-            if (c.name == fieldCheckedName) {
-                checked = c.getValue();
-            }
+    /**
+     * Return a value from component whith name = fieldValueName
+     * if filter condition is true.
+     * "filter" parameter is a function with an internal parameter
+     * representing the component to evaluate.
+     * 
+     * Example:
+     * var v = binder.getConditionalValue(function(c){c.name="field"}, "id")
+     * 
+     * @param {function(component){}} filter 
+     * @param {string} fieldValueName 
+     * @returns 
+     */
+    vcc.getFilteredValue = function (fieldValueName, filter) {
+        var theValue = null;
+        var condition = false;
 
+        if (filter == undefined) {
+            filter = function (o) { let v = o.getValue(); return v.toString() == "true" ? true : false; }
+        }
+
+        for (let c of vcc.components) {
             if (c.name == fieldValueName) {
                 theValue = c.getValue();
             }
-
+            if (!condition) {
+                if (filter(c)) {
+                    condition = true;
+                }
+            }
         }
-
-        if (checked) {
+        if (condition) {
             return theValue;
         } else {
             return null;
         }
-
-
     }
+
 
 
     return vcc;
@@ -584,7 +608,9 @@ function KDJsonAdapter(properties) {
         } else {
             postData = JSON.stringify(layer.data[position]);
         }
-        postData = window.btoa(postData);
+       // postData = window.btoa(postData);
+        postData = layer.toBase64(postData);
+        
         console.log(postData);
 
         //Formatting data
@@ -600,7 +626,7 @@ function KDJsonAdapter(properties) {
     }
 
     /**
-     * Use to send request directly to server, like delete operations.
+     * Use to send request directly to server, like deletes or inserts operations.
      * Example:
      * var ids = [1,3,5,7];
      * adapter.send("url.domain.com", ids);
@@ -610,7 +636,10 @@ function KDJsonAdapter(properties) {
      * @param {*} error_callback 
      * @param {*} method 
      */
-    layer.send = function (url, values, success_callback, error_callback, method) {
+    layer.send = function (url, values, success_callback, error_callback, method, dataLabel) {
+
+        if (dataLabel == undefined) dataLabel = "data";
+
         //Formatting data
         var formData = new FormData();
         formData.append("data", values);
@@ -621,27 +650,6 @@ function KDJsonAdapter(properties) {
         bridge.send();
     }
 
-
-    /**
-     * Create a new record on database
-     * @param {string} insertUrl sql insert string
-     * @param {*} selectUrl sql select stametement string
-     * @param {*} formData data to be sended (Using FormData)
-     * @param {*} success_callback Callbacks when successfull
-     * @param {*} error_callback Callback when error
-     * @param {*} method Url method: POST, GET, etc.
-     * @returns 
-     */
-    layer.newRecord = function (insertUrl, selectUrl, formData, success_callback, error_callback, method) {
-        var bridge = new KDServerBridge(insertUrl, formData, success_callback, error_callback, method);
-        bridge.success_callback = function () {
-            layer.load(selectUrl, method);
-            if (success_callback != undefined) { success_callback(); }
-        }
-        bridge.send(layer.extraData);
-        return layer;
-
-    }
 
 
     layer.insertRecord = function () {
@@ -678,11 +686,11 @@ function KDJsonAdapter(properties) {
     }
 
 
-    layer.getCheckedValues = function (fieldChecked, fieldValue) {
+    layer.getFilteredValues = function (fieldValueName, filter) {
         var r = [];
         for (let binder of layer.components) {
-            let v = binder.getCheckedValue(fieldChecked, fieldValue);
-            if (v != undefined) {
+            let v = binder.getFilteredValue(fieldValueName, filter);
+            if (v != null) {
                 r.push(v);
             }
         }
