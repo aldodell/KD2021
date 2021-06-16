@@ -55,7 +55,7 @@ class KDObject {
          * Use to import all properties from kdObject to this object.
          * @param {*} kdObject 
          */
-        this.apply = function(kdObject) {
+        this.apply = function (kdObject) {
             this.appliedObject = kdObject;
             this.appliedObject();
         }
@@ -782,6 +782,46 @@ function KDVerticalScroll(properties) {
     layer.dom.style.overflowY = "scroll";
     return layer;
 
+}
+
+
+/**
+ * Class to manipulate local files
+ */
+class KDFile extends KDObject {
+    constructor() {
+        super();
+        this.read = function (file, callback) {
+            var rawFile = new XMLHttpRequest();
+            rawFile.open("GET", file, false);
+            rawFile.onreadystatechange = function () {
+                if (rawFile.readyState === 4) {
+                    if (rawFile.status === 200 || rawFile.status == 0) {
+                        var allText = rawFile.responseText;
+                        callback(allText);
+                    }
+                }
+            }
+            rawFile.send(null);
+        }
+    }
+}
+
+class KDApi extends KDObject {
+
+    constructor() {
+        super();
+        var code = "";
+
+        //Assign version
+        this.version = 1.0;
+        
+        // Return code
+        this.getCode = function (callback) {
+            var f = new KDFile();
+            f.read("kd2021.js", callback);
+        }
+    }
 }
 
 

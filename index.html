@@ -9,118 +9,20 @@
 <body>
 </body>
 
+
 <script src="kd2021.js"></script>
 <script>
+    var api = new KDApi();
 
-    var theme0 = {
-        "style": {
-            "backgroundColor": "gold",
-            "display": "flex",
-            "flexWrap": "wrap",
-            "alignItems": "center",
-            "justifyContent": "space-around"
-
-        }
-    }
-
-    var theme1 = {
-        "style": {
-            "width": "3cm",
-            "margin": "8px"
-
-        }
-    }
-
-    var theme2 = {
-        "style": {
-            "width": "90%"
-        }
-    }
-
-    var theme3 = {
-        "style": {
-
-
-        }
-    }
-
-
-
-    var w = document.body.clientWidth + "px";
-    var data = { "name": "Ascensor de última generación con todos los juguetes", "price": "20$", "img": "i1.jpg", "width": w }
-
-
-
-    KDBinder(theme0)
-        .wrap(
-            KDBinder(theme1)
-                .wrap(
-                    KDImage(theme2)
-                        .setName("img"),
-                    KDLayer(theme3)
-                        .setName("name"),
-                    KDLayer(theme3)
-                        .setName("price"),
-                    KDLayer(theme3)
-                        .setName("width")
-
-                ),
-            KDBinder(theme1)
-                .wrap(
-                    KDImage(theme2)
-                        .setName("img"),
-                    KDLayer(theme3)
-                        .setName("name"),
-                    KDLayer(theme3)
-                        .setName("price"),
-                    KDLayer(theme3)
-                        .setName("width")
-
-                ),
-            KDBinder(theme1)
-                .wrap(
-                    KDImage(theme2)
-                        .setName("img"),
-                    KDLayer(theme3)
-                        .setName("name"),
-                    KDLayer(theme3)
-                        .setName("price"),
-                    KDLayer(theme3)
-                        .setName("width")
-
-                ),
-
-            KDBinder(theme1)
-                .wrap(
-                    KDImage(theme2)
-                        .setName("img"),
-                    KDLayer(theme3)
-                        .setName("name"),
-                    KDLayer(theme3)
-                        .setName("price"),
-                    KDLayer(theme3)
-                        .setName("width")
-
-                )
-
-
-
-
-
-
-        )
-        .bind(data)
-        .setOnDataChanged(function (data) { alert(JSON.stringify(data)) })
+    var l1 = KDLayer()
         .sendToBody();
 
+    api.getCode(function (c) { l1.setValue(c) });
 
 
 
 
 </script>
 
-<div style="width: 100%; background-color: blueviolet; font-size:32px">
-    abc
-</div>
 
 </html>
