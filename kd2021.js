@@ -1,4 +1,4 @@
-
+"use strict";
 var KD_ALL = ".*";
 var KD_ID = 0;
 
@@ -44,6 +44,20 @@ class KDObject {
 
         this.fromBase64 = function (bin) {
             return decodeURIComponent(window.atob(bin));
+        }
+
+        this.storeIn = function (variableName) {
+            window[variableName] = this;
+            return this;
+        }
+
+        /**
+         * Use to import all properties from kdObject to this object.
+         * @param {*} kdObject 
+         */
+        this.apply = function(kdObject) {
+            this.appliedObject = kdObject;
+            this.appliedObject();
         }
 
     }
@@ -152,6 +166,7 @@ class KDComponent extends KDObject {
         super(properties);
 
         var it = this;
+        this.name = this.id;
 
         /** Send to body current KDs components */
         this.sendToBody = function () { document.getElementsByTagName("body")[0].appendChild(this.dom); return this; }
@@ -167,9 +182,6 @@ class KDComponent extends KDObject {
 
         /** Set name field. Used with binder works */
         this.setName = function (name) { this.name = name; if (this.dom) { this.dom.name = name; } return this; }
-
-
-
 
         /**
          * Add an event handler to DOM. 
@@ -261,7 +273,7 @@ class KDVisualComponent extends KDComponent {
             return this;
         }
 
-
+        this.setEnabled = function (boolValue) { this.dom.disabled = !boolValue; return this; }
     }
 }
 
@@ -345,9 +357,18 @@ function KDJoiner(objects) {
 function KDStyler(args) {
     var r = {};
     for (let p of arguments) {
-        for (let n of Object.keys(p)) {
-            r[n] = p[n];
+
+        //Verificamos primero si el argumento pasado es otro styler:
+        if (p.style == undefined) {
+            for (let n of Object.keys(p)) {
+                r[n] = p[n];
+            }
+        } else {
+            for (let n of Object.keys(p.style)) {
+                r[n] = p.style[n];
+            }
         }
+
     }
     var z = {}
     z.style = r;
@@ -392,7 +413,7 @@ function KDBinder(properties) {
         for (let c of vcc.components) {
             //Setting values from initial data
             if (binder.data[c.name] != undefined) {
-                console.log(c.id);
+                //console.log(c.id);
                 c.setValue(binder.data[c.name])
                 // bind on change event
                 c.dom.addEventListener("change", function () {
@@ -424,7 +445,7 @@ function KDBinder(properties) {
 
     vcc.clone = function () {
         let vcc2 = KDBinder(properties);
-        for (c of vcc.components) {
+        for (let c of vcc.components) {
             vcc2.wrap(c.clone())
         }
         return vcc2;
@@ -494,8 +515,8 @@ class KDServerBridge extends KDObject {
             if (this.mimeType == undefined) this.mimeType = 'text/xml';
 
             //Define callback
-            if (this.success_callback == undefined) this.success_callback = function (msg) { alert(msg); }
-            if (this.error_callback == undefined) this.error_callback = function (msg) { alert(msg); }
+            if (this.success_callback == undefined) this.success_callback = function (msg) { }
+            if (this.error_callback == undefined) this.error_callback = function (msg) { }
 
             //Create request
             var http_request = new XMLHttpRequest();
@@ -529,7 +550,7 @@ class KDServerBridge extends KDObject {
 function KDDataJoiner(data) {
     var r = new FormData();
     for (let d of arguments) {
-        for (p of d.entries()) {
+        for (let p of d.entries()) {
             r.append(p[0], p[1]);
         }
     }
@@ -608,10 +629,10 @@ function KDJsonAdapter(properties) {
         } else {
             postData = JSON.stringify(layer.data[position]);
         }
-       // postData = window.btoa(postData);
+        // postData = window.btoa(postData);
         postData = layer.toBase64(postData);
-        
-        console.log(postData);
+
+        // console.log(postData);
 
         //Formatting data
         var formData = new FormData();
@@ -744,6 +765,25 @@ function KDCheckBox(properties) {
 
 }
 
+function KDSpan(properties) {
+    if (properties == undefined) properties = {};
+    properties.htmlClass = "span";
+    var vcc = new KDVisualContainerComponent(properties);
+    vcc.setValue = function (value) {
+        vcc.dom.textContent = value;
+        return vcc;
+    }
+    return vcc;
+
+}
+
+function KDVerticalScroll(properties) {
+    var layer = KDLayer(properties);
+    layer.dom.style.overflowY = "scroll";
+    return layer;
+
+}
+
 
 
 /*********** */
@@ -759,4 +799,9 @@ class Alive extends KDApplication {
     }
 }
 
+
+/****************************** */
+/* CSS themes */
+
+var KDThemeSimpleShadow = KDStyler({ "boxShadow": "10px 20px 30px blue" });
 
