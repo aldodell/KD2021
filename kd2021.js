@@ -843,5 +843,6 @@ class Alive extends KDApplication {
 /****************************** */
 /* CSS themes */
 
-var KDThemeSimpleShadow = KDStyler({ "boxShadow": "10px 20px 30px blue" });
+var KDThemeSimpleShadow = KDStyler({ "boxShadow": "4px 4px 4px gray" });
+var KDThemeDisplayBlock = KDStyler({ "display": "block" });
 
