@@ -60,6 +60,15 @@ class KDObject {
             this.appliedObject();
         }
 
+
+        this.showProperties = function () {
+            var r = "";
+            for (let p in this) {
+                r = r + p + "\n";
+            }
+            return r;
+        }
+
     }
 }
 
@@ -191,9 +200,10 @@ class KDComponent extends KDObject {
          * @param {Function} callback Function with a parameter passing itself javascript object.
          * @returns itself
          */
-        this.addEvent = function(eventType, callback) {
+        this.addEvent = function (eventType, callback) {
             var comp = this;
-            this.dom.addEventListener(eventType, function(){callback(comp)});
+            this.dom.addEventListener(eventType, function () { callback(comp) });
+            this.eventHandlers.push({ "eventType": eventType, "callback": callback })
             return this;
         }
 
@@ -202,6 +212,12 @@ class KDComponent extends KDObject {
             obj.getId();
             obj.dom = obj.dom.cloneNode(true);
             obj.dom.id = obj.id;
+
+            for (let e of obj.eventHandlers) {
+                let et = e.eventType;
+                let cb = e.callback;
+                obj.dom.addEventListener(et, function () { cb(obj) });
+            }
 
             return obj;
         }
@@ -411,6 +427,9 @@ function KDBinder(properties) {
         if (data != undefined) vcc.data = data;
         if (binder == undefined) binder = vcc;
         for (let c of vcc.components) {
+            // set a reference for data row on each component
+            c.data = data;
+
             //Setting values from initial data
             if (binder.data[c.name] != undefined) {
                 //console.log(c.id);
@@ -420,8 +439,6 @@ function KDBinder(properties) {
                     binder.data[c.name] = c.getValue();
                     binder.onDataChanged(binder.data);
                 });
-                // set a reference for data row on each component
-                c.data = data;
             }
             // Bind children
             if (c.bind != undefined) {
@@ -634,8 +651,6 @@ function KDJsonAdapter(properties) {
         // postData = window.btoa(postData);
         postData = layer.toBase64(postData);
 
-        // console.log(postData);
-
         //Formatting data
         var formData = new FormData();
         formData.append("data", postData);
@@ -698,8 +713,6 @@ function KDJsonAdapter(properties) {
         return layer;
     }
 
-
-
     layer.getData = function () {
         var r = [];
         for (let b of layer.components) {
@@ -708,7 +721,6 @@ function KDJsonAdapter(properties) {
         layer.data = r;
         return r;
     }
-
 
     layer.getFilteredValues = function (fieldValueName, filter) {
         var r = [];
@@ -720,9 +732,6 @@ function KDJsonAdapter(properties) {
         }
         return r;
     }
-
-
-
     return layer;
 }
 
