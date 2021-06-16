@@ -84,12 +84,9 @@ class KDMessage extends KDObject {
 class KDKernel extends KDObject {
 
     constructor() {
-
         super();
-
         var applicationClasses = new Array(0);
         var applications = new Array(0);
-
 
         /** Add an application */
         this.addApplication = function (kdApplicationClass) {
@@ -325,6 +322,7 @@ class KDVisualContainerComponent extends KDVisualComponent {
                 this.components.splice(position, 1);
                 this.dom.childNodes[position].remove();
             }
+            return this;
         }
     }
 }
@@ -815,7 +813,7 @@ class KDApi extends KDObject {
 
         //Assign version
         this.version = 1.0;
-        
+
         // Return code
         this.getCode = function (callback) {
             var f = new KDFile();
