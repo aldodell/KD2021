@@ -181,15 +181,19 @@ class KDComponent extends KDObject {
         this.setName = function (name) { this.name = name; if (this.dom) { this.dom.name = name; } return this; }
 
         /**
+         * 
+         */
+        this.eventHandlers = [];
+
+        /**
          * Add an event handler to DOM. 
          * @param {String} eventType String wich represents event name like "click"
-         * @param {Function} code Function with a parameter passing itself javascript object.
+         * @param {Function} callback Function with a parameter passing itself javascript object.
          * @returns itself
          */
-        this.addEvent = function (eventType, code) {
+        this.addEvent = function(eventType, callback) {
             var comp = this;
-            this.dom.addEventListener(eventType, function () { code(comp) });
-
+            this.dom.addEventListener(eventType, function(){callback(comp)});
             return this;
         }
 
@@ -198,11 +202,7 @@ class KDComponent extends KDObject {
             obj.getId();
             obj.dom = obj.dom.cloneNode(true);
             obj.dom.id = obj.id;
-            /*
-             for (let e of this.eventHandlers) {
-                 obj.addEvent(e.eventType, e.code);
-             }
-             */
+
             return obj;
         }
 
@@ -243,7 +243,9 @@ class KDVisualComponent extends KDComponent {
         }
 
 
-        this.suffixGraphicUnit = function (pixels) { return pixels + KDDefaultGraphicUnit }
+        this.suffixGraphicUnit = function (size) {
+            return isNaN(size) ? size : size + KDDefaultGraphicUnit;
+        }
 
         this.height = 20;
         this.width = 100;
@@ -418,6 +420,8 @@ function KDBinder(properties) {
                     binder.data[c.name] = c.getValue();
                     binder.onDataChanged(binder.data);
                 });
+                // set a reference for data row on each component
+                c.data = data;
             }
             // Bind children
             if (c.bind != undefined) {
@@ -674,6 +678,7 @@ function KDJsonAdapter(properties) {
     layer.insertRecord = function () {
         let newBinder = layer.binder.clone();
         layer.wrap(newBinder);
+        newBinder.dom.scrollIntoView();
         return layer;
     }
 
@@ -688,8 +693,8 @@ function KDJsonAdapter(properties) {
             let record = layer.data[i];
             let binder = layer.components[i];
             binder.bind(record, binder);
-        }
 
+        }
         return layer;
     }
 
