@@ -370,7 +370,7 @@ function kdJoiner(objects) {
 
 /** 
  * Return a object with style object inside and styles properties passed through
- * Example: KDButton(kdStyler({"backgroundColor":"red", "margin", "2px"}))
+ * Example: kdButton(kdStyler({"backgroundColor":"red", "margin", "2px"}))
  */
 function kdStyler(args) {
     var r = {};
@@ -568,7 +568,7 @@ class kdServerBridge extends KDObject {
  * @param {[FromData]} data 
  * @returns FormData
  */
-function KDDataJoiner(data) {
+function kdDataJoiner(data) {
     var r = new FormData();
     for (let d of arguments) {
         for (let p of d.entries()) {
@@ -578,7 +578,7 @@ function KDDataJoiner(data) {
     return r;
 }
 
-function KDJsonAdapter(properties) {
+function kdJsonAdapter(properties) {
     var layer = kdLayer(properties);
     layer.binder = {};
     layer.data = [];
@@ -656,7 +656,7 @@ function KDJsonAdapter(properties) {
         //Formatting data
         var formData = new FormData();
         formData.append("data", postData);
-        formData = KDDataJoiner(layer.extraData, formData);
+        formData = kdDataJoiner(layer.extraData, formData);
 
         //Sending data:
         var bridge = new kdServerBridge(url, formData, success_callback, error_callback, method);
@@ -677,13 +677,14 @@ function KDJsonAdapter(properties) {
      * @param {*} method 
      */
     layer.send = function (url, values, success_callback, error_callback, method, dataLabel) {
-
+        //Checking data
         if (dataLabel == undefined) dataLabel = "data";
+        if (values == undefined) values = "";
 
         //Formatting data
         var formData = new FormData();
         formData.append("data", values);
-        formData = KDDataJoiner(layer.extraData, formData);
+        formData = kdDataJoiner(layer.extraData, formData);
 
         //Sending data:
         var bridge = new kdServerBridge(url, formData, success_callback, error_callback, method);
@@ -739,7 +740,7 @@ function KDJsonAdapter(properties) {
 
 
 /** Function return a Button  */
-function KDButton(properties) {
+function kdButton(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "input";
     properties.type = "button";
@@ -751,7 +752,7 @@ function KDButton(properties) {
  * @param {*} properties 
  * @returns 
  */
-function KDTextField(properties) {
+function kdTextField(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "input";
     properties.type = "text";
@@ -759,7 +760,7 @@ function KDTextField(properties) {
 }
 
 
-function KDImage(properties) {
+function kdImage(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "img";
     var vc = new KDVisualComponent(properties);
@@ -768,7 +769,7 @@ function KDImage(properties) {
     return vc;
 }
 
-function KDCheckBox(properties) {
+function kdCheckBox(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "input";
     properties.type = "checkbox";
@@ -779,7 +780,7 @@ function KDCheckBox(properties) {
 
 }
 
-function KDSpan(properties) {
+function kdSpan(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "span";
     var vcc = new KDVisualContainerComponent(properties);
@@ -791,7 +792,7 @@ function KDSpan(properties) {
 
 }
 
-function KDVerticalScroll(properties) {
+function kdVerticalScroll(properties) {
     var layer = kdLayer(properties);
     layer.dom.style.overflowY = "scroll";
     return layer;
