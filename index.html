@@ -14,7 +14,7 @@
 <script>
     var api = new KDApi();
 
-    var l1 = KDLayer()
+    var l1 = kdLayer()
         .sendToBody();
 
     api.getCode(function (c) { l1.setValue(c) });

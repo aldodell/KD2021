@@ -289,6 +289,8 @@ class KDVisualComponent extends KDComponent {
         }
 
         this.setEnabled = function (boolValue) { this.dom.disabled = !boolValue; return this; }
+
+        this.setHint = function (text) { this.dom.placeholder = text; return this; }
     }
 }
 
@@ -355,7 +357,7 @@ class KDVisualContainerComponent extends KDVisualComponent {
  * @param {*} Object Object will be joined. 
  * @returns object with all properties. Last objects will override first objects properties on result object.
  */
-function KDJoiner(objects) {
+function kdJoiner(objects) {
     var r = {}
     for (let o of arguments) {
         for (let p in o) {
@@ -368,9 +370,9 @@ function KDJoiner(objects) {
 
 /** 
  * Return a object with style object inside and styles properties passed through
- * Example: KDButton(KDStyler({"backgroundColor":"red", "margin", "2px"}))
+ * Example: KDButton(kdStyler({"backgroundColor":"red", "margin", "2px"}))
  */
-function KDStyler(args) {
+function kdStyler(args) {
     var r = {};
     for (let p of arguments) {
 
@@ -397,7 +399,7 @@ function KDStyler(args) {
  * @param {*} properties 
  * @returns A KDVisualContainerComponent with DIV style.
  */
-function KDLayer(properties) {
+function kdLayer(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "div";
     var vcc = new KDVisualContainerComponent(properties);
@@ -406,8 +408,8 @@ function KDLayer(properties) {
 }
 
 
-function KDBinder(properties) {
-    var vcc = KDLayer(properties);
+function kdBinder(properties) {
+    var vcc = kdLayer(properties);
     vcc.data = {}
     vcc.onDataChanged = function (object) { }
 
@@ -419,7 +421,7 @@ function KDBinder(properties) {
     vcc.setOnDataChanged = function (code) { vcc.onDataChanged = code; return vcc }
 
     /**
-     * Bind KDBinder with all its children components. Is recursive (with others inner KDBinder)
+     * Bind kdBinder with all its children components. Is recursive (with others inner kdBinder)
      * @param {*} data 
      * @returns 
      */
@@ -463,7 +465,7 @@ function KDBinder(properties) {
     }
 
     vcc.clone = function () {
-        let vcc2 = KDBinder(properties);
+        let vcc2 = kdBinder(properties);
         for (let c of vcc.components) {
             vcc2.wrap(c.clone())
         }
@@ -515,7 +517,7 @@ function KDBinder(properties) {
 }
 
 
-class KDServerBridge extends KDObject {
+class kdServerBridge extends KDObject {
     constructor(url, data, success_callback, error_callback, method, mimeType) {
         super();
         this.url = url;
@@ -577,7 +579,7 @@ function KDDataJoiner(data) {
 }
 
 function KDJsonAdapter(properties) {
-    var layer = KDLayer(properties);
+    var layer = kdLayer(properties);
     layer.binder = {};
     layer.data = [];
     layer.extraData = new FormData();
@@ -603,7 +605,7 @@ function KDJsonAdapter(properties) {
     }
 
 
-    /** Set associated KDBinder */
+    /** Set associated kdBinder */
     layer.wrapBinder = function (binder) { layer.binder = binder; return layer; }
 
     /**
@@ -615,7 +617,7 @@ function KDJsonAdapter(properties) {
      * @returns 
      */
     layer.load = function (url, method, success_callback, error_callback,) {
-        var bridge = new KDServerBridge(url, layer.extraData, function (response) {
+        var bridge = new kdServerBridge(url, layer.extraData, function (response) {
             var data = JSON.parse(response);
             if (!Array.isArray(data)) {
                 data = [data];
@@ -657,7 +659,7 @@ function KDJsonAdapter(properties) {
         formData = KDDataJoiner(layer.extraData, formData);
 
         //Sending data:
-        var bridge = new KDServerBridge(url, formData, success_callback, error_callback, method);
+        var bridge = new kdServerBridge(url, formData, success_callback, error_callback, method);
         bridge.send();
 
         return layer;
@@ -684,7 +686,7 @@ function KDJsonAdapter(properties) {
         formData = KDDataJoiner(layer.extraData, formData);
 
         //Sending data:
-        var bridge = new KDServerBridge(url, formData, success_callback, error_callback, method);
+        var bridge = new kdServerBridge(url, formData, success_callback, error_callback, method);
         bridge.send();
     }
 
@@ -790,7 +792,7 @@ function KDSpan(properties) {
 }
 
 function KDVerticalScroll(properties) {
-    var layer = KDLayer(properties);
+    var layer = kdLayer(properties);
     layer.dom.style.overflowY = "scroll";
     return layer;
 
@@ -855,6 +857,7 @@ class Alive extends KDApplication {
 /****************************** */
 /* CSS themes */
 
-var KDThemeSimpleShadow = KDStyler({ "boxShadow": "4px 4px 4px gray" });
-var KDThemeDisplayBlock = KDStyler({ "display": "block" });
+var KDThemeSimpleShadow = kdStyler({ "boxShadow": "4px 4px 4px gray" });
+var KDThemeDisplayBlock = kdStyler({ "display": "block" });
+var KDThemeDisplayInline = kdStyler({ "display": "inline" });
 
