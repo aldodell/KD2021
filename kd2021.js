@@ -18,7 +18,6 @@ class KDObject {
             this[p] = properties[p];
         }
 
-
         // This is an assign function that copies full descriptors
         this.completeAssign = function completeAssign(target, ...sources) {
             sources.forEach(source => {
@@ -59,7 +58,6 @@ class KDObject {
             this.appliedObject = kdObject;
             this.appliedObject();
         }
-
 
         this.showProperties = function () {
             var r = "";
@@ -177,11 +175,20 @@ class KDComponent extends KDObject {
         /** Send to body current KDs components */
         this.sendToBody = function () { document.getElementsByTagName("body")[0].appendChild(this.dom); return this; }
 
+        this.value = {}
+
         /**  Set value at dom object. */
-        this.setValue = function (value) { this.dom.value = value; return this; }
+        this.setValue = function (value) {
+            this.value = value;
+            this.dom.value = value;
+            return this;
+        }
 
         /** Get value from dom value property */
-        this.getValue = function () { return this.dom.value }
+        this.getValue = function () {
+            this.value = this.dom.value;
+            return this.value;
+        }
 
         /** Get an object with name and value properties */
         this.getObject = function () { var o = {}; o[this.name] = this.getValue(); return o }
@@ -403,7 +410,11 @@ function kdLayer(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "div";
     var vcc = new KDVisualContainerComponent(properties);
-    vcc.setValue = function (value) { vcc.dom.innerHTML = value; return vcc }
+    vcc.setValue = function (value) {
+        vcc.value = value;
+        vcc.dom.innerHTML = value;
+        return vcc;
+    }
     return vcc;
 }
 
@@ -512,6 +523,7 @@ function kdBinder(properties) {
     }
 
 
+    vcc.clear = function () { vcc.data = {}; return vcc; }
 
     return vcc;
 }
@@ -606,7 +618,11 @@ function kdJsonAdapter(properties) {
 
 
     /** Set associated kdBinder */
-    layer.wrapBinder = function (binder) { layer.binder = binder; return layer; }
+    layer.wrapBinder = function (binder) {
+        layer.data = [];
+        layer.binder = binder;
+        return layer;
+    }
 
     /**
      * Load data from an URL and invoke createList method
