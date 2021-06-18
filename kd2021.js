@@ -333,6 +333,7 @@ class KDVisualContainerComponent extends KDVisualComponent {
             for (let comp of this.components) {
                 obj.wrap(comp.clone());
             }
+            obj.setValue(this.getValue());
             return obj;
         }
 
@@ -409,12 +410,25 @@ function kdStyler(args) {
 function kdLayer(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "div";
+
     var vcc = new KDVisualContainerComponent(properties);
+
     vcc.setValue = function (value) {
         vcc.value = value;
         vcc.dom.innerHTML = value;
         return vcc;
     }
+
+    vcc.getValue = function () {
+        return vcc.dom.innerHTML;
+    }
+
+    vcc.setText = function (text) {
+        vcc.dom.innerText = text;
+        return vcc;
+    }
+
+
     return vcc;
 }
 
@@ -524,6 +538,18 @@ function kdBinder(properties) {
 
 
     vcc.clear = function () { vcc.data = {}; return vcc; }
+
+    /**
+     * Set directly a pair key/value on KDBinder data property 
+     * @param {*} key 
+     * @param {*} value 
+     */
+    vcc.setDataEntry = function (key, value) {
+        vcc.data[key] = value;
+        return vcc;
+    }
+
+
 
     return vcc;
 }
@@ -812,6 +838,19 @@ function kdVerticalScroll(properties) {
     var layer = kdLayer(properties);
     layer.dom.style.overflowY = "scroll";
     return layer;
+
+}
+
+function kdLabel(properties) {
+    if (properties == undefined) properties = {};
+    properties.htmlClass = "label";
+    var vc = new KDVisualComponent(properties);
+    vc.setValue = function (value) {
+        vc.value = value;
+        vc.dom.appendChild(vc.dom.ownerDocument.createTextNode(value));
+        return vc;
+    }
+    return vc;
 
 }
 
