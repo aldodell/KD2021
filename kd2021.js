@@ -214,6 +214,20 @@ class KDComponent extends KDObject {
             return this;
         }
 
+        /**
+         * Add an event handler to DOM. But directly attached. Is exactly like addEventListener
+         * @param {*} eventType 
+         * @param {*} callback 
+         * @returns 
+         */
+        this.addEventDirectly = function (eventType, callback) {
+            var comp = this;
+            this.dom.addEventListener(eventType, callback);
+            this.eventHandlers.push({ "eventType": eventType, "callback": callback })
+            return this;
+        }
+
+
         this.clone = function () {
             let obj = this.completeAssign({}, this);
             obj.getId();
@@ -250,12 +264,16 @@ class KDComponent extends KDObject {
     }
 }
 
-var KDDefaultGraphicUnit = "px";
+var kdDefaultGraphicUnit = "px";
 
 /** Visual component class base */
 class KDVisualComponent extends KDComponent {
     constructor(properties) {
         super(properties);
+
+        this.height = 20;
+        this.width = 100;
+
 
         if (this.type != undefined) {
             this.dom.setAttribute("type", this.type);
@@ -267,11 +285,9 @@ class KDVisualComponent extends KDComponent {
 
 
         this.suffixGraphicUnit = function (size) {
-            return isNaN(size) ? size : size + KDDefaultGraphicUnit;
+            return isNaN(size) ? size : size + kdDefaultGraphicUnit;
         }
 
-        this.height = 20;
-        this.width = 100;
 
 
         this.setHeight = function (value) {
@@ -279,11 +295,21 @@ class KDVisualComponent extends KDComponent {
             this.dom.style.height = this.suffixGraphicUnit(value);
             return this;
         }
+
         this.setWidth = function (value) {
             this.width = value;
             this.dom.style.width = this.suffixGraphicUnit(value);
             return this;
         }
+
+        this.getWidth = function () {
+            return this.dom.offsetWidth;
+        }
+
+        this.getHeight = function () {
+            return this.dom.offsetHeight;
+        }
+
 
         this.setTop = function (value) {
             this.dom.style.top = this.suffixGraphicUnit(value);
@@ -324,6 +350,10 @@ class KDVisualContainerComponent extends KDVisualComponent {
         }
 
 
+        /**
+         * Return a component with same properties from parent
+         * @returns KDComponent
+         */
         this.clone = function () {
             let obj = this.completeAssign({}, this);
             obj.dom = obj.dom.cloneNode(false);
@@ -412,6 +442,7 @@ function kdLayer(properties) {
     properties.htmlClass = "div";
 
     var vcc = new KDVisualContainerComponent(properties);
+
 
     vcc.setValue = function (value) {
         vcc.value = value;
@@ -555,7 +586,7 @@ function kdBinder(properties) {
 }
 
 
-class kdServerBridge extends KDObject {
+class KDServerBridge extends KDObject {
     constructor(url, data, success_callback, error_callback, method, mimeType) {
         super();
         this.url = url;
@@ -659,7 +690,7 @@ function kdJsonAdapter(properties) {
      * @returns 
      */
     layer.load = function (url, method, success_callback, error_callback,) {
-        var bridge = new kdServerBridge(url, layer.extraData, function (response) {
+        var bridge = new KDServerBridge(url, layer.extraData, function (response) {
             var data = JSON.parse(response);
             if (!Array.isArray(data)) {
                 data = [data];
@@ -701,7 +732,7 @@ function kdJsonAdapter(properties) {
         formData = kdDataJoiner(layer.extraData, formData);
 
         //Sending data:
-        var bridge = new kdServerBridge(url, formData, success_callback, error_callback, method);
+        var bridge = new KDServerBridge(url, formData, success_callback, error_callback, method);
         bridge.send();
 
         return layer;
@@ -729,7 +760,7 @@ function kdJsonAdapter(properties) {
         formData = kdDataJoiner(layer.extraData, formData);
 
         //Sending data:
-        var bridge = new kdServerBridge(url, formData, success_callback, error_callback, method);
+        var bridge = new KDServerBridge(url, formData, success_callback, error_callback, method);
         bridge.send();
     }
 
@@ -854,6 +885,68 @@ function kdLabel(properties) {
 
 }
 
+/**
+ * Layer used for send files to server.
+ * Call .active method is madatory
+ * @param {} properties 
+ * @returns 
+ */
+function kdDropFileZone(properties) {
+    var layer = kdLayer(properties);
+
+    function preventDefault(ev, layer, style) {
+        ev.preventDefault();
+        if (style != undefined) { layer.apply(style); }
+    }
+
+    layer.dragEnterStyle = undefined;
+    layer.dragLeaveStyle = undefined;
+    layer.dragOverStyle = undefined;
+
+    layer.setDragEnterStyle = function (style) { layer.dragEnterStyle = style; return this }
+    layer.setDragLeaveStyle = function (style) { layer.dragLeaveStyle = style; return this }
+    layer.setDragOverStyle = function (style) { layer.dragOverStyle = style; return this }
+
+
+    /**
+     * Method to make active the Drope File Zone
+     * @param {*} url 
+     * @param {*} extraFormData Data within FormData object
+     * @param {*} progress_callback Method with this sign: callback(i, files length)
+     * @param {*} success_callback 
+     * @param {*} error_callback 
+     * @param {*} method 
+     * @param {*} mimeType 
+     * @returns 
+     */
+    layer.active = function (url, extraFormData, progress_callback, success_callback, error_callback, method, mimeType) {
+        if (progress_callback == undefined) progress_callback = function () { }
+        var i = 0;
+        layer.addEventDirectly("dragenter", preventDefault, layer.dragEnterStyle);
+        layer.addEventDirectly("dragover", preventDefault, layer.dragOverStyle);
+        layer.addEventDirectly("dragleave", preventDefault, layer.dragLeaveStyle);
+
+        layer.addEventDirectly("drop", function (ev) {
+            ev.preventDefault();
+            let dt = ev.dataTransfer;
+            let files = dt.files;
+            let filesAr = [...files];
+            filesAr.forEach(
+                file => {
+                    let data = new FormData();
+                    data.append("file", file);
+                    if (extraFormData != undefined) data = kdDataJoiner(extraFormData, data);
+                    let bridge = new KDServerBridge(url, data, function (m) { progress_callback(i, filesAr.length); success_callback(m) }, error_callback, method, mimeType);
+                    bridge.send();
+                }
+            )
+        });
+        return layer;
+    }
+    return layer;
+}
+
+
 
 /**
  * Class to manipulate local files
@@ -913,7 +1006,49 @@ class Alive extends KDApplication {
 /****************************** */
 /* CSS themes */
 
-var KDThemeSimpleShadow = kdStyler({ "boxShadow": "4px 4px 4px gray" });
-var KDThemeDisplayBlock = kdStyler({ "display": "block" });
-var KDThemeDisplayInline = kdStyler({ "display": "inline" });
+var kdStyleSimpleShadow = function () { return kdStyler({ "boxShadow": "4px 4px 4px gray" }); }
+var kdStyleDisplayBlock = function () { return kdStyler({ "display": "block" }); }
+var kdStyleDisplayInline = function () { return kdStyler({ "display": "inline" }); }
+var kdStyleWidthPercent = function (value) {
+    if (value == undefined) value = 100;
+    var s = value + "%";
+    console.log(s)
+    return kdStyler({ "width": s })
+}
+
+/**
+ * Return width with kdDefaultGraphicUnit
+ * @param {*} value 
+ * @returns 
+ */
+var kdStyleWidth = function (value) {
+    if (value == undefined) value = 100;
+    var s = value + kdDefaultGraphicUnit;
+    console.log(s)
+    return kdStyler({ "width": s })
+}
+
+var kdStyleBorder = function (size, color, style) {
+    if (size == undefined) size = 1;
+    if (!isNaN(size)) size = size + "px";
+    if (color == undefined) color = "black";
+    if (style == undefined) style = "solid";
+    var s = size + " " + color + " " + style;
+    console.log(s);
+    return kdStyler({ "border": s })
+}
+var kdStyleCenterHorizontally = function () {
+    return kdStyler({ "margin": "0 auto" });
+}
+
+var kdStyleMargin = function (all) {
+    var s = all + kdDefaultGraphicUnit;
+    console.log(s);
+    return kdStyler({ "margin": s });
+}
+
+
+var kdStyleBackgroundColor = function (color) {
+    return kdStyler({ "backgroundColor": color });
+}
 
