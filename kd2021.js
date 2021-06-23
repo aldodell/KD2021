@@ -585,8 +585,19 @@ function kdBinder(properties) {
     return vcc;
 }
 
-
+/**
+ * 
+ */
 class KDServerBridge extends KDObject {
+    /**
+     * KDServerBridge constructor
+     * @param {*} url 
+     * @param {*} data 
+     * @param {*} success_callback 
+     * @param {*} error_callback 
+     * @param {*} method 
+     * @param {*} mimeType 
+     */
     constructor(url, data, success_callback, error_callback, method, mimeType) {
         super();
         this.url = url;
