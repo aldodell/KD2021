@@ -647,6 +647,36 @@ function kdDataJoiner(data) {
     return r;
 }
 
+/**
+ * Function wich return a FormData object, but have a modified "append" method which could be chained
+ * Allways use .formData method as final chain secuence like:
+ * var fd = kdFormData().append("a",1).append("b",2).formData();
+ * @param {*} formData 
+ * @returns FormData
+ */
+function kdFormData(formData) {
+    var obj = {};
+    obj.data = [];
+
+    obj.append = function (key, value) {
+        var e = { key: value }
+        this.data.push(e);
+        return this;
+    }
+
+    obj.formData = function () {
+        var fd = new FormData();
+        for (let e of this.data) {
+            fd.append(e.key, e.value);
+        }
+        return fd;
+    }
+
+    return obj;
+}
+
+
+
 function kdJsonAdapter(properties) {
     var layer = kdLayer(properties);
     layer.binder = {};
@@ -920,17 +950,20 @@ function kdDropFileZone(properties) {
      * @returns 
      */
     layer.active = function (url, extraFormData, progress_callback, success_callback, error_callback, method, mimeType) {
-        if (progress_callback == undefined) progress_callback = function () { }
-        var i = 0;
+        if (progress_callback == undefined) progress_callback = function (progress, quantity) { }
         layer.addEventDirectly("dragenter", preventDefault, layer.dragEnterStyle);
         layer.addEventDirectly("dragover", preventDefault, layer.dragOverStyle);
         layer.addEventDirectly("dragleave", preventDefault, layer.dragLeaveStyle);
+
+        if (success_callback == undefined) success_callback = function (m) { }
+        if (error_callback == undefined) error_callback = function (m) { }
 
         layer.addEventDirectly("drop", function (ev) {
             ev.preventDefault();
             let dt = ev.dataTransfer;
             let files = dt.files;
             let filesAr = [...files];
+            var i = 0;
             filesAr.forEach(
                 file => {
                     let data = new FormData();
@@ -938,6 +971,7 @@ function kdDropFileZone(properties) {
                     if (extraFormData != undefined) data = kdDataJoiner(extraFormData, data);
                     let bridge = new KDServerBridge(url, data, function (m) { progress_callback(i, filesAr.length); success_callback(m) }, error_callback, method, mimeType);
                     bridge.send();
+                    i++;
                 }
             )
         });
