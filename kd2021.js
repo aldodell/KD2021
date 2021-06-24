@@ -665,9 +665,24 @@ function kdDataJoiner(data) {
  * @param {*} formData 
  * @returns FormData
  */
-function kdFormData(formData) {
+function kdFormData() {
     var obj = {};
     obj.data = [];
+
+    /**
+     * Concat all kdFormsData() passed as arguemnts
+     * @returns 
+     */
+    obj.concat = function () {
+        for (let kdfd of arguments) {
+            if (kdfd != undefined) {
+                for (let e of kdfd) {
+                    obj.data.push(e);
+                }
+            }
+        }
+        return this;
+    }
 
     obj.append = function (key, value) {
         var e = { key: value }
@@ -935,7 +950,7 @@ function kdLabel(properties) {
 function kdDropFileZone(properties) {
     var layer = kdLayer(properties);
 
-    function preventDefault(ev, layer, style) {
+    layer.preventDefault = function (ev, layer, style) {
         ev.preventDefault();
         if (style != undefined) { layer.apply(style); }
     }
@@ -948,11 +963,10 @@ function kdDropFileZone(properties) {
     layer.setDragLeaveStyle = function (style) { layer.dragLeaveStyle = style; return this }
     layer.setDragOverStyle = function (style) { layer.dragOverStyle = style; return this }
 
-
     /**
      * Method to make active the Drope File Zone
      * @param {*} url 
-     * @param {*} extraFormData Data within FormData object
+     * @param {*} extraKdFormData Data within kdFormData object
      * @param {*} progress_callback Method with this sign: callback(i, files length)
      * @param {*} success_callback 
      * @param {*} error_callback 
@@ -960,11 +974,11 @@ function kdDropFileZone(properties) {
      * @param {*} mimeType 
      * @returns 
      */
-    layer.active = function (url, extraFormData, progress_callback, success_callback, error_callback, method, mimeType) {
+    layer.active = function (url, extraKdFormData, progress_callback, success_callback, error_callback, method, mimeType) {
         if (progress_callback == undefined) progress_callback = function (progress, quantity) { }
-        layer.addEventDirectly("dragenter", preventDefault, layer.dragEnterStyle);
-        layer.addEventDirectly("dragover", preventDefault, layer.dragOverStyle);
-        layer.addEventDirectly("dragleave", preventDefault, layer.dragLeaveStyle);
+        layer.addEventDirectly("dragenter", layer.preventDefault, layer.dragEnterStyle);
+        layer.addEventDirectly("dragover", layer.preventDefault, layer.dragOverStyle);
+        layer.addEventDirectly("dragleave", layer.preventDefault, layer.dragLeaveStyle);
 
         if (success_callback == undefined) success_callback = function (m) { }
         if (error_callback == undefined) error_callback = function (m) { }
@@ -977,9 +991,11 @@ function kdDropFileZone(properties) {
             var i = 0;
             filesAr.forEach(
                 file => {
-                    let data = new FormData();
-                    data.append("file", file);
-                    if (extraFormData != undefined) data = kdDataJoiner(extraFormData, data);
+                    let data = kdFormData()
+                        .concat(extraKdFormData)
+                        .append("file", file)
+                        .formData();
+
                     let bridge = new KDServerBridge(url, data, function (m) { progress_callback(i, filesAr.length); success_callback(m) }, error_callback, method, mimeType);
                     bridge.send();
                     i++;
