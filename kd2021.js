@@ -176,9 +176,32 @@ class KDComponent extends KDObject {
         this.sendToBody = function () { document.getElementsByTagName("body")[0].appendChild(this.dom); return this; }
 
         this.value = {}
+        this.valuePrefix = undefined;
+        this.valueSuffix = undefined;
+
+        this.setValuePrefix = function (prefix) {
+            this.valuePrefix = prefix;
+            return this;
+        }
+
+
+        this.setValueSuffix = function (suffix) {
+            this.valueSuffix = suffix;
+            return this;
+        }
+
 
         /**  Set value at dom object. */
         this.setValue = function (value) {
+
+            if (this.valuePrefix != undefined) {
+                value = this.valuePrefix + value;
+            }
+
+            if (this.valueSuffix != undefined) {
+                value = value + this.valueSuffix;
+            }
+
             this.value = value;
             this.dom.value = value;
             return this;
@@ -592,7 +615,7 @@ class KDServerBridge extends KDObject {
     /**
      * KDServerBridge constructor
      * @param {*} url 
-     * @param {*} data 
+     * @param {*} data raw data. Consider to use kdFormData or simple FormData
      * @param {*} success_callback 
      * @param {*} error_callback 
      * @param {*} method 
@@ -658,48 +681,37 @@ function kdDataJoiner(data) {
     return r;
 }
 
+
+
+
 /**
  * Function wich return a FormData object, but have a modified "append" method which could be chained
- * Allways use .formData method as final chain secuence like:
- * var fd = kdFormData().append("a",1).append("b",2).formData();
+ * Allways use .formData property as final chain secuence like:
+ * var fd = kdFormData(aFormDataObject).append("a",1).append("b",2).formData;
  * @param {*} formData 
  * @returns FormData
  */
-function kdFormData() {
+function kdFormData(formData) {
     var obj = {};
-    obj.data = [];
 
-    /**
-     * Concat all kdFormsData() passed as arguemnts
-     * @returns 
-     */
-    obj.concat = function () {
-        for (let kdfd of arguments) {
-            if (kdfd != undefined) {
-                for (let e of kdfd) {
-                    obj.data.push(e);
-                }
-            }
-        }
-        return this;
+    if (formData == undefined) {
+        obj.formData = new FormData();
+    } else {
+        obj.formData = formData;
     }
 
-    obj.append = function (key, value) {
-        var e = { key: value }
-        this.data.push(e);
-        return this;
-    }
-
-    obj.formData = function () {
-        var fd = new FormData();
-        for (let e of this.data) {
-            fd.append(e.key, e.value);
+    obj.append = function (key, value, param) {
+        if (param != undefined) {
+            obj.formData.append(key, value, param);
+        } else {
+            obj.formData.append(key, value);
         }
-        return fd;
+        return obj;
     }
 
     return obj;
 }
+
 
 
 
@@ -966,7 +978,7 @@ function kdDropFileZone(properties) {
     /**
      * Method to make active the Drope File Zone
      * @param {*} url 
-     * @param {*} extraKdFormData Data within kdFormData object
+     * @param {*} extraFormData Data within kdFormData object
      * @param {*} progress_callback Method with this sign: callback(i, files length)
      * @param {*} success_callback 
      * @param {*} error_callback 
@@ -974,7 +986,7 @@ function kdDropFileZone(properties) {
      * @param {*} mimeType 
      * @returns 
      */
-    layer.active = function (url, extraKdFormData, progress_callback, success_callback, error_callback, method, mimeType) {
+    layer.active = function (url, extraFormData, progress_callback, success_callback, error_callback, method, mimeType) {
         if (progress_callback == undefined) progress_callback = function (progress, quantity) { }
         layer.addEventDirectly("dragenter", layer.preventDefault, layer.dragEnterStyle);
         layer.addEventDirectly("dragover", layer.preventDefault, layer.dragOverStyle);
@@ -991,10 +1003,9 @@ function kdDropFileZone(properties) {
             var i = 0;
             filesAr.forEach(
                 file => {
-                    let data = kdFormData()
-                        .concat(extraKdFormData)
+                    let data = kdFormData(extraFormData)
                         .append("file", file)
-                        .formData();
+                        .formData;
 
                     let bridge = new KDServerBridge(url, data, function (m) { progress_callback(i, filesAr.length); success_callback(m) }, error_callback, method, mimeType);
                     bridge.send();
