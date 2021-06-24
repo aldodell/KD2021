@@ -23,13 +23,13 @@ class KDPDO
     }
 
     public function getParameter($name)
-    {   
-        
+    {
+
         $r = $this->INVALID;
         if (isset($_REQUEST[$name])) {
             $r = $_REQUEST[$name];
         }
-    
+
         return $r;
     }
 
@@ -46,7 +46,7 @@ class KDPDO
             $json = json_encode($rows);
             return $json;
         } catch (PDOException $e) {
-            echo "Error quaerying: " . $e->getMessage();
+            echo "Error quaerying: " . $e->getMessage() . "\nSQL=" . $sql;
             die();
         }
     }

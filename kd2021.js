@@ -714,11 +714,23 @@ function kdFormData(formData) {
 
 
 
-
+/**
+ * Wrapper to perform JSON and XmlRequest activities.
+ * @param {*} properties 
+ * @returns 
+ */
 function kdJsonAdapter(properties) {
     var layer = kdLayer(properties);
     layer.binder = {};
+
+    /**
+     * Array of data to be sent to request
+     */
     layer.data = [];
+
+    /**
+     * FormData object to be sent with request
+     */
     layer.extraData = new FormData();
 
     /**
@@ -905,8 +917,14 @@ function kdImage(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "img";
     var vc = new KDVisualComponent(properties);
-    vc.setImageUrl = function (url) { this.dom.src = url; return this }
-    vc.setValue = vc.setImageUrl;
+    //overide parent setValue
+    vc._setValue = vc.setValue;
+    vc.setValue = function (url) {
+        vc._setValue(url);
+        this.dom.src = vc.getValue();
+        return this;
+    }
+
     return vc;
 }
 
