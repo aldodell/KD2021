@@ -59,10 +59,14 @@ class KDObject {
             this.appliedObject();
         }
 
-        this.showProperties = function () {
-            var r = "";
+        this.showProperties = function (r) {
+            if (r == undefined) r = "";
             for (let p in this) {
                 r = r + p + "\n";
+                if (p.showProperties != undefined) {
+                    r = r + "\t\n";
+                    r = p.showProperties(r);
+                }
             }
             return r;
         }
@@ -175,7 +179,10 @@ class KDComponent extends KDObject {
         /** Send to body current KDs components */
         this.sendToBody = function () { document.getElementsByTagName("body")[0].appendChild(this.dom); return this; }
 
-        this.value = {}
+        //Define a value if is undefined
+        if (this.value == undefined) { this.value = {} }
+
+        //Handling suffix and prefix values
         this.valuePrefix = undefined;
         this.valueSuffix = undefined;
 
@@ -409,10 +416,6 @@ class KDVisualContainerComponent extends KDVisualComponent {
 }
 
 
-
-
-
-
 /**
  * This function join properties from objects passed as arguments
  * @param {*} Object Object will be joined. 
@@ -449,8 +452,19 @@ function kdStyler(args) {
         }
 
     }
+
     var z = {}
     z.style = r;
+
+    z.toString = function (r) {
+        if (r == undefined) r = "";
+        for (let key of Object.keys(this.style)) {
+            r = r + key + ":" + this.style[key] + "\n";
+        }
+        return r;
+    }
+
+
     return z;
 }
 
@@ -928,6 +942,67 @@ function kdImage(properties) {
     return vc;
 }
 
+
+function kdImageWithButtons(properties) {
+    if (properties == undefined) properties = {};
+    var layer = kdLayer(properties);
+    var deleteButton = kdButton()
+        .setValue("X");
+    var image = kdImage();
+
+    layer.wrap(image, deleteButton);
+
+    layer.setValuePrefix = function (value) {
+        layer.components[0].setValuePrefix(value);
+        return layer;
+    }
+
+    layer.setValueSuffix = function (value) {
+        layer.components[0].setValueSuffix(value);
+        return layer;
+    }
+
+
+    layer.setValue = function (value) {
+        layer.components[0].setValue(value);
+        return layer;
+    }
+
+
+
+
+    return layer;
+}
+
+/*
+ layer.image = kdImage(properties);
+    layer.deleteButton = kdButton()
+        .setValue("X")
+        .setHeight(32)
+        .setWidth(32);
+    layer.wrap(
+        layer.deleteButton,
+        layer.image
+
+    );
+
+    layer._setHeight = layer.setHeight;
+    layer.setHeight = function (value) {
+        layer._setHeight(value);
+        layer.image.setHeight(value);
+    }
+
+    layer._setWidth = layer.setWidth;
+    layer.setWidth = function (value) {
+        layer._setWidth(value);
+        layer.image.setWidth(value);
+    }
+
+*/
+
+
+
+
 function kdCheckBox(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "input";
@@ -971,6 +1046,33 @@ function kdLabel(properties) {
 
 }
 
+
+function kdHorizontalLine(properties) {
+    if (properties == undefined) properties = {};
+    properties.htmlClass = "hr";
+    var vc = new KDVisualComponent(properties);
+    return vc;
+
+}
+
+
+function kdProgress(properties) {
+    if (properties == undefined) properties = {};
+    if (properties.value == undefined) properties.value = 0;
+    if (properties.mx == undefined) properties.max = 1;
+    properties.htmlClass = "progress";
+
+    var vc = new KDVisualComponent(properties);
+
+    vc.setMaximum = function (max) { vc.dom.max = max; return vc; }
+
+    return vc;
+
+}
+
+
+
+
 /**
  * Layer used for send files to server.
  * Call .active method is madatory
@@ -982,16 +1084,18 @@ function kdDropFileZone(properties) {
 
     layer.preventDefault = function (ev, layer, style) {
         ev.preventDefault();
-        if (style != undefined) { layer.apply(style); }
+        if (style != undefined) {
+            layer.apply(style);
+        }
     }
 
     layer.dragEnterStyle = undefined;
     layer.dragLeaveStyle = undefined;
     layer.dragOverStyle = undefined;
 
-    layer.setDragEnterStyle = function (style) { layer.dragEnterStyle = style; return this }
-    layer.setDragLeaveStyle = function (style) { layer.dragLeaveStyle = style; return this }
-    layer.setDragOverStyle = function (style) { layer.dragOverStyle = style; return this }
+    layer.setDragEnterStyle = function (style) { layer.dragEnterStyle = style; return layer; }
+    layer.setDragLeaveStyle = function (style) { layer.dragLeaveStyle = style; return layer; }
+    layer.setDragOverStyle = function (style) { layer.dragOverStyle = style; return layer; }
 
     /**
      * Method to make active the Drope File Zone
@@ -1024,7 +1128,6 @@ function kdDropFileZone(properties) {
                     let data = kdFormData(extraFormData)
                         .append("file", file)
                         .formData;
-
                     let bridge = new KDServerBridge(url, data, function (m) { progress_callback(i, filesAr.length); success_callback(m) }, error_callback, method, mimeType);
                     bridge.send();
                     i++;
@@ -1120,7 +1223,7 @@ var kdStyleWidth = function (value) {
 
 var kdStyleBorder = function (size, color, style) {
     if (size == undefined) size = 1;
-    if (!isNaN(size)) size = size + "px";
+    if (!isNaN(size)) size = size + kdDefaultGraphicUnit;
     if (color == undefined) color = "black";
     if (style == undefined) style = "solid";
     var s = size + " " + color + " " + style;
@@ -1131,10 +1234,35 @@ var kdStyleCenterHorizontally = function () {
     return kdStyler({ "margin": "0 auto" });
 }
 
-var kdStyleMargin = function (all) {
-    var s = all + kdDefaultGraphicUnit;
+var kdStyleMargin = function () {
+    var s = "";
+    if (arguments.length == 1) {
+        var n = arguments[0];
+        s = n + (!isNaN(n) ? kdDefaultGraphicUnit : "");
+    } else {
+        for (let n of arguments) {
+            s = s + n + (!isNaN(n) ? kdDefaultGraphicUnit : "") + " ";
+        }
+        s = s.trim();
+    }
     console.log(s);
     return kdStyler({ "margin": s });
+}
+
+
+var kdStylePadding = function () {
+    var s = "";
+    if (arguments.length == 1) {
+        var n = arguments[0];
+        s = n + (!isNaN(n) ? kdDefaultGraphicUnit : "");
+    } else {
+        for (let n of arguments) {
+            s = s + n + (!isNaN(n) ? kdDefaultGraphicUnit : "") + " ";
+        }
+        s = s.trim();
+    }
+    console.log(s);
+    return kdStyler({ "padding": s });
 }
 
 
