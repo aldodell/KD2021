@@ -191,16 +191,14 @@ class KDComponent extends KDObject {
             return this;
         }
 
-
         this.setValueSuffix = function (suffix) {
             this.valueSuffix = suffix;
             return this;
         }
 
 
-        /**  Set value at dom object. */
-        this.setValue = function (value) {
-
+        /** Add prefix and suffix if any */
+        this.prepareValue = function (value) {
             if (this.valuePrefix != undefined) {
                 value = this.valuePrefix + value;
             }
@@ -208,8 +206,13 @@ class KDComponent extends KDObject {
             if (this.valueSuffix != undefined) {
                 value = value + this.valueSuffix;
             }
+            return value;
+        }
 
+        /**  Set value at dom object. */
+        this.setValue = function (value) {
             this.value = value;
+            value = this.prepareValue(value);
             this.dom.value = value;
             return this;
         }
@@ -224,7 +227,7 @@ class KDComponent extends KDObject {
         this.getObject = function () { var o = {}; o[this.name] = this.getValue(); return o }
 
         /** Set name field. Used with binder works */
-        this.setName = function (name) { this.name = name; if (this.dom) { this.dom.name = name; } return this; }
+        this.setName = function (name) { this.name = name; if (this.dom != undefined) { this.dom.name = name; } return this; }
 
         /**
          * 
@@ -477,9 +480,7 @@ function kdStyler(args) {
 function kdLayer(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "div";
-
     var vcc = new KDVisualContainerComponent(properties);
-
 
     vcc.setValue = function (value) {
         vcc.value = value;
@@ -502,8 +503,11 @@ function kdLayer(properties) {
 
 
 function kdBinder(properties) {
+    //Each KDBinder is a KDLayer
     var vcc = kdLayer(properties);
+    /** Data reference object */
     vcc.data = {}
+    /** Event onDataChanged */
     vcc.onDataChanged = function (object) { }
 
     /** 
@@ -521,13 +525,14 @@ function kdBinder(properties) {
     vcc.bind = function (data, binder) {
         if (data != undefined) vcc.data = data;
         if (binder == undefined) binder = vcc;
+
         for (let c of vcc.components) {
             // set a reference for data row on each component
             c.data = data;
 
             //Setting values from initial data
             if (binder.data[c.name] != undefined) {
-                //console.log(c.id);
+                //Set value of each component
                 c.setValue(binder.data[c.name])
                 // bind on change event
                 c.dom.addEventListener("change", function () {
@@ -546,13 +551,14 @@ function kdBinder(properties) {
     vcc.setValues = function (data, binder) {
         if (binder == undefined) binder = vcc;
         for (let c of vcc.components) {
+
             //Setting values from initial data
             if (binder.data[c.name] != undefined) {
                 c.setValue(binder.data[c.name])
             }
 
             if (c.bind != undefined) {
-                c.setValue(binder.data, binder);
+                c.setValues(binder.data, binder);
             }
         }
     }
@@ -694,8 +700,6 @@ function kdDataJoiner(data) {
     }
     return r;
 }
-
-
 
 
 /**
@@ -932,10 +936,11 @@ function kdImage(properties) {
     properties.htmlClass = "img";
     var vc = new KDVisualComponent(properties);
     //overide parent setValue
-    vc._setValue = vc.setValue;
+
     vc.setValue = function (url) {
-        vc._setValue(url);
-        this.dom.src = vc.getValue();
+        vc.value = url;
+        url = vc.prepareValue(url);
+        vc.dom.src = url;
         return this;
     }
 
@@ -945,63 +950,29 @@ function kdImage(properties) {
 
 function kdImageWithButtons(properties) {
     if (properties == undefined) properties = {};
-    var layer = kdLayer(properties);
-    var deleteButton = kdButton()
-        .setValue("X");
-    var image = kdImage();
+    properties.htmlClass = "div";
 
-    layer.wrap(image, deleteButton);
-
-    layer.setValuePrefix = function (value) {
-        layer.components[0].setValuePrefix(value);
-        return layer;
-    }
-
-    layer.setValueSuffix = function (value) {
-        layer.components[0].setValueSuffix(value);
-        return layer;
-    }
+    var vcc = new KDVisualContainerComponent(properties);
 
 
-    layer.setValue = function (value) {
-        layer.components[0].setValue(value);
-        return layer;
+    vcc.wrap(
+        kdImage(),
+        kdButton()
+            .setValue("X")
+    )
+
+    vcc.setName = function (name) { vcc.components[0].setName(name); return vcc; }
+    vcc.setValuePrefix = function (fix) { vcc.components[0].setValuePrefix(fix); return vcc; }
+    vcc.setValueSuffix = function (fix) { vcc.components[0].setValueSuffix(fix); return vcc; }
+    vcc.setValue = function (value) {
+        vcc.components[0].setValue(value);
+        return vcc;
     }
 
 
+    return vcc;
 
-
-    return layer;
 }
-
-/*
- layer.image = kdImage(properties);
-    layer.deleteButton = kdButton()
-        .setValue("X")
-        .setHeight(32)
-        .setWidth(32);
-    layer.wrap(
-        layer.deleteButton,
-        layer.image
-
-    );
-
-    layer._setHeight = layer.setHeight;
-    layer.setHeight = function (value) {
-        layer._setHeight(value);
-        layer.image.setHeight(value);
-    }
-
-    layer._setWidth = layer.setWidth;
-    layer.setWidth = function (value) {
-        layer._setWidth(value);
-        layer.image.setWidth(value);
-    }
-
-*/
-
-
-
 
 function kdCheckBox(properties) {
     if (properties == undefined) properties = {};
@@ -1164,7 +1135,6 @@ class KDFile extends KDObject {
 }
 
 class KDApi extends KDObject {
-
     constructor() {
         super();
         var code = "";
