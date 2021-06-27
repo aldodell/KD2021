@@ -519,34 +519,25 @@ function kdBinder(properties) {
 
     /**
      * Bind kdBinder with all its children components. Is recursive (with others inner kdBinder)
-     * @param {*} data 
-     * @returns 
-     */
-    vcc.bind = function (data, binder) {
-        if (data != undefined) vcc.data = data;
-        if (binder == undefined) binder = vcc;
+    */
 
+    vcc.bind = function () {
+        let data = vcc.data;
+        console.log(data);
         for (let c of vcc.components) {
-            // set a reference for data row on each component
-            c.data = data;
-
-            //Setting values from initial data
-            if (binder.data[c.name] != undefined) {
-                //Set value of each component
-                c.setValue(binder.data[c.name])
-                // bind on change event
-                c.dom.addEventListener("change", function () {
-                    binder.data[c.name] = c.getValue();
-                    binder.onDataChanged(binder.data);
-                });
-            }
-            // Bind children
-            if (c.bind != undefined) {
-                c.bind(binder.data, binder);
+            if (c.bind == undefined) {
+                if (data[c.name] != undefined) {
+                    c.setValue(data[c.name]);
+                }
+            } else {
+                c.data = data;
+                c.bind();
             }
         }
         return vcc;
     }
+
+
 
     vcc.setValues = function (data, binder) {
         if (binder == undefined) binder = vcc;
@@ -1240,3 +1231,32 @@ var kdStyleBackgroundColor = function (color) {
     return kdStyler({ "backgroundColor": color });
 }
 
+
+
+/*
+vcc.bind = function (data, binder) {
+        if (data != undefined) vcc.data = data;
+        if (binder == undefined) binder = vcc;
+
+        for (let c of vcc.components) {
+            // set a reference for data row on each component
+            c.data = data;
+
+            //Setting values from initial data
+            if (binder.data[c.name] != undefined) {
+                //Set value of each component
+                c.setValue(binder.data[c.name])
+                // bind on change event
+                c.dom.addEventListener("change", function () {
+                    binder.data[c.name] = c.getValue();
+                    binder.onDataChanged(binder.data);
+                });
+            }
+            // Bind children
+            if (c.bind != undefined) {
+                c.bind(binder.data, binder);
+            }
+        }
+        return vcc;
+    }
+    */
