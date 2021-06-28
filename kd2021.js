@@ -6,7 +6,7 @@ var KD_ID = 0;
 /** Base class of Kicsy obects */
 class KDObject {
     constructor(properties) {
-
+        this.kdReflector = "KDObject";
         this.getId = function () { this.id = "KD_" + (++KD_ID); }
         this.getId();
 
@@ -273,6 +273,8 @@ class KDComponent extends KDObject {
                 obj.dom.addEventListener(et, function () { cb(obj) });
             }
 
+
+
             return obj;
         }
 
@@ -292,6 +294,9 @@ class KDComponent extends KDObject {
 
         //Check some common properties
         if (this.value) this.dom.value = this.value;
+
+        //Parent kdComponent
+        this.parent = null;
 
 
     }
@@ -320,8 +325,6 @@ class KDVisualComponent extends KDComponent {
         this.suffixGraphicUnit = function (size) {
             return isNaN(size) ? size : size + kdDefaultGraphicUnit;
         }
-
-
 
         this.setHeight = function (value) {
             this.height = value;
@@ -373,10 +376,12 @@ class KDVisualContainerComponent extends KDVisualComponent {
                     for (let o of obj) {
                         this.dom.appendChild(o.dom);
                         this.components.push(o);
+                        o.parent = this;
                     }
                 } else {
                     this.dom.appendChild(obj.dom);
                     this.components.push(obj);
+                    obj.parent = this;
                 }
             }
             return this;
@@ -502,122 +507,6 @@ function kdLayer(properties) {
 }
 
 
-function kdBinder(properties) {
-    //Each KDBinder is a KDLayer
-    var vcc = kdLayer(properties);
-    /** Data reference object */
-    vcc.data = {}
-    /** Event onDataChanged */
-    vcc.onDataChanged = function (object) { }
-
-    /** 
-     * Assign a function with an only parameter data to retrieve changes when user modify data
-     * Example:
-     * .setOnDataChanged(function(obj){alert(JSON.stringify(obj))})
-     * */
-    vcc.setOnDataChanged = function (code) { vcc.onDataChanged = code; return vcc }
-
-    /**
-     * Bind kdBinder with all its children components. Is recursive (with others inner kdBinder)
-    */
-
-    vcc.bind = function () {
-        let data = vcc.data;
-        console.log(data);
-        for (let c of vcc.components) {
-            if (c.bind == undefined) {
-                if (data[c.name] != undefined) {
-                    c.setValue(data[c.name]);
-                }
-            } else {
-                c.data = data;
-                c.bind();
-            }
-        }
-        return vcc;
-    }
-
-
-
-    vcc.setValues = function (data, binder) {
-        if (binder == undefined) binder = vcc;
-        for (let c of vcc.components) {
-
-            //Setting values from initial data
-            if (binder.data[c.name] != undefined) {
-                c.setValue(binder.data[c.name])
-            }
-
-            if (c.bind != undefined) {
-                c.setValues(binder.data, binder);
-            }
-        }
-    }
-
-    vcc.clone = function () {
-        let vcc2 = kdBinder(properties);
-        for (let c of vcc.components) {
-            vcc2.wrap(c.clone())
-        }
-        return vcc2;
-    }
-
-
-    /**
-     * Return a value from component whith name = fieldValueName
-     * if filter condition is true.
-     * "filter" parameter is a function with an internal parameter
-     * representing the component to evaluate.
-     * 
-     * Example:
-     * var v = binder.getConditionalValue(function(c){c.name="field"}, "id")
-     * 
-     * @param {function(component){}} filter 
-     * @param {string} fieldValueName 
-     * @returns 
-     */
-    vcc.getFilteredValue = function (fieldValueName, filter) {
-        var theValue = null;
-        var condition = false;
-
-        if (filter == undefined) {
-            filter = function (o) { let v = o.getValue(); return v.toString() == "true" ? true : false; }
-        }
-
-        for (let c of vcc.components) {
-            if (c.name == fieldValueName) {
-                theValue = c.getValue();
-            }
-            if (!condition) {
-                if (filter(c)) {
-                    condition = true;
-                }
-            }
-        }
-        if (condition) {
-            return theValue;
-        } else {
-            return null;
-        }
-    }
-
-
-    vcc.clear = function () { vcc.data = {}; return vcc; }
-
-    /**
-     * Set directly a pair key/value on KDBinder data property 
-     * @param {*} key 
-     * @param {*} value 
-     */
-    vcc.setDataEntry = function (key, value) {
-        vcc.data[key] = value;
-        return vcc;
-    }
-
-
-
-    return vcc;
-}
 
 /**
  * 
@@ -724,35 +613,165 @@ function kdFormData(formData) {
 
 
 /**
+ * Return a special kdLayer to wrap kdComponents and syncronize it with data
+ * using "data" property. This property is a javascript object wich have properties like
+ * a dictionary. Each property name is binded with each component with same name.
+ * 
+ * @param {*} properties 
+ * @returns 
+ */
+function kdBinder(properties) {
+    //Each KDBinder is a KDLayer
+    var vcc = kdLayer(properties);
+    vcc.kdReflector = "kdBinder";
+    vcc.extraData = {};
+
+    /** Data reference object */
+    vcc.data = {}
+    /** Event onDataChanged */
+    vcc.onDataChanged = function (object) { }
+
+    /** 
+     * Assign a function with an only parameter data to retrieve changes when user modify data
+     * Example:
+     * .setOnDataChanged(function(obj){alert(JSON.stringify(obj))})
+     * */
+    vcc.setOnDataChanged = function (code) { vcc.onDataChanged = code; return vcc }
+
+    vcc.appendExtraData = function (key, value) {
+        vcc.extraData[key] = value;
+        return vcc;
+    }
+
+    /**
+     * 
+     * @returns A object with kdComponents values
+     */
+    vcc.getValue = function () {
+        let data = vcc.extraData;
+        for (let c of vcc.components) { //Each component of a jsonAdapter are binders
+            if (c.name != undefined) {
+                let name = c.name.trim();
+                if (name != "") {
+                    data[name] = c.getValue();
+                }
+            }
+        }
+        vcc.data = data;
+        return data;
+    }
+
+
+    vcc.setValue = function (data) {
+        if (data == undefined) {
+            data = vcc.data;
+        } else {
+            vcc.data = data;
+        }
+
+        for (let c of vcc.components) {
+            if (c.name == "*") {
+                c.setValue(data);
+            } else {
+                if (data[c.name] != undefined) {
+                    c.setValue(data[c.name])
+                }
+            }
+        }
+    }
+
+
+    vcc.clone = function () {
+        let vcc2 = kdBinder(properties);
+        for (let c of vcc.components) {
+            vcc2.wrap(c.clone())
+        }
+        vcc2.extraData = vcc.extraData;
+        return vcc2;
+    }
+
+
+    /**
+     * Return a value from component whith name = fieldValueName
+     * if filter condition is true.
+     * "filter" parameter is a function with an internal parameter
+     * representing the component to evaluate.
+     * 
+     * Example:
+     * var v = binder.getConditionalValue(function(c){c.name="field"}, "id")
+     * 
+     * @param {function(component){}} filter 
+     * @param {string} fieldValueName 
+     * @returns 
+     */
+    vcc.getFilteredValue = function (fieldValueName, filter) {
+        var theValue = null;
+        var condition = false;
+
+        if (filter == undefined) {
+            filter = function (o) { let v = o.getValue(); return v.toString() == "true" ? true : false; }
+        }
+
+        for (let c of vcc.components) {
+            if (c.name == fieldValueName) {
+                theValue = c.getValue();
+            }
+            if (!condition) {
+                if (filter(c)) {
+                    condition = true;
+                }
+            }
+        }
+        if (condition) {
+            return theValue;
+        } else {
+            return null;
+        }
+    }
+
+
+    vcc.clear = function () {
+        vcc.data = {};
+        return vcc;
+    }
+
+    /**
+     * Set directly a pair key/value on KDBinder data property 
+     * @param {*} key 
+     * @param {*} value 
+     */
+    vcc.setDataEntry = function (key, value) {
+        vcc.data[key] = value;
+        return vcc;
+    }
+
+    return vcc;
+}
+
+
+
+
+/**
  * Wrapper to perform JSON and XmlRequest activities.
  * @param {*} properties 
  * @returns 
  */
 function kdJsonAdapter(properties) {
     var layer = kdLayer(properties);
-    layer.binder = {};
-
-    /**
-     * Array of data to be sent to request
-     */
-    layer.data = [];
-
-    /**
-     * FormData object to be sent with request
-     */
+    layer.binder = null;
     layer.extraData = new FormData();
+    layer.dataFieldName = "data";
 
     /**
-  * 
-  * @returns Clear extra data
-  */
+     * Clear extra data form
+     */
     layer.clearExtraData = function () {
         layer.extraData = new FormData();
         return layer;
     }
 
     /**
-     * 
+     * Append key - value pair for make a server request
      * @param {*} key 
      * @param {*} value 
      * @returns 
@@ -762,141 +781,110 @@ function kdJsonAdapter(properties) {
         return layer;
     }
 
-
-    /** Set associated kdBinder */
+    /**
+     * Each kdJsonAdapter must have a kdBinder inner object. Use this method for binder it.
+     * @param {*} binder 
+     * @returns 
+     */
     layer.wrapBinder = function (binder) {
-        layer.data = [];
+        binder.parent = layer;
         layer.binder = binder;
         return layer;
     }
 
     /**
-     * Load data from an URL and invoke createList method
+     * Dot no use.
+     * @param {*} data 
+     */
+    layer.loaded = function (data) {
+        data = eval(data);
+        for (let row of data) {
+            var newBinder = layer.binder.clone();
+            layer.wrap(newBinder);
+            newBinder.setValue(row);
+        }
+    }
+
+    /**
+     * Make a request to server and load data. Then make a list with all children of binder objects
      * @param {*} url 
-     * @param {*} method 
      * @param {*} success_callback 
      * @param {*} error_callback 
+     * @param {*} method 
+     * @param {*} mimeType 
      * @returns 
      */
-    layer.load = function (url, method, success_callback, error_callback,) {
-        var bridge = new KDServerBridge(url, layer.extraData, function (response) {
-            var data = JSON.parse(response);
-            if (!Array.isArray(data)) {
-                data = [data];
-            }
-            layer.data = data;
-            layer.createList();
-            if (success_callback != undefined) success_callback();
+    layer.load = function (url, success_callback, error_callback, method, mimeType) {
+        //Configure server bridge
+        var bridge = new KDServerBridge(
+            url,
+            layer.extraData,
+            function (data) {
+                layer.loaded(data);
+                if (success_callback != undefined) {
+                    success_callback(data);
+                }
+            },
+            error_callback,
+            method,
+            mimeType
+        );
 
-        }, error_callback, method);
-        bridge.send();
-        return layer;
-    }
-
-
-    /**
-     * Send a request to server in order to save informatio
-     * @param {URL} url scrit to be executed
-     * @param {function(msg)} success_callback callback invoke when successful operation
-     * @param {function(msg)} error_callback {} callback invoke when error operation result.
-     * @param {int} position Position of row to save. Put undefined to save all data.
-     * @param {String} method Request methos: GET, POST, etc.
-     * @returns itself reference
-     */
-    layer.save = function (url, success_callback, error_callback, position, method) {
-
-        //Encoding data:
-        var postData = [];
-        if (position == undefined) {
-            postData = JSON.stringify(layer.data);
-        } else {
-            postData = JSON.stringify(layer.data[position]);
-        }
-        // postData = window.btoa(postData);
-        postData = layer.toBase64(postData);
-
-        //Formatting data
-        var formData = new FormData();
-        formData.append("data", postData);
-        formData = kdDataJoiner(layer.extraData, formData);
-
-        //Sending data:
-        var bridge = new KDServerBridge(url, formData, success_callback, error_callback, method);
+        //Send request
         bridge.send();
 
         return layer;
     }
 
     /**
-     * Use to send request directly to server, like deletes or inserts operations.
-     * Example:
-     * var ids = [1,3,5,7];
-     * adapter.send("url.domain.com", ids);
+     * Retrieve all binders data, pack into json and base64 and make a request to server.
+     * 
      * @param {*} url 
-     * @param {*} values 
      * @param {*} success_callback 
      * @param {*} error_callback 
      * @param {*} method 
+     * @param {*} mimeType 
+     * @returns 
      */
-    layer.send = function (url, values, success_callback, error_callback, method, dataLabel) {
-        //Checking data
-        if (dataLabel == undefined) dataLabel = "data";
-        if (values == undefined) values = "";
+    layer.save = function (url, success_callback, error_callback, method, mimeType) {
 
-        //Formatting data
-        var formData = new FormData();
-        formData.append("data", values);
-        formData = kdDataJoiner(layer.extraData, formData);
+        var data = [];
 
-        //Sending data:
-        var bridge = new KDServerBridge(url, formData, success_callback, error_callback, method);
-        bridge.send();
-    }
-
-
-
-    layer.insertRecord = function () {
-        let newBinder = layer.binder.clone();
-        layer.wrap(newBinder);
-        newBinder.dom.scrollIntoView();
-        return layer;
-    }
-
-    layer.createList = function () {
-        layer.clear();
-
-        for (let i = 0; i < layer.data.length; i++) {
-            layer.insertRecord();
-        }
-
-        for (let i = 0; i < layer.data.length; i++) {
-            let record = layer.data[i];
-            let binder = layer.components[i];
-            binder.bind(record, binder);
-
-        }
-        return layer;
-    }
-
-    layer.getData = function () {
-        var r = [];
-        for (let b of layer.components) {
-            r.push(b.data);
-        }
-        layer.data = r;
-        return r;
-    }
-
-    layer.getFilteredValues = function (fieldValueName, filter) {
-        var r = [];
+        //Get values from binder
         for (let binder of layer.components) {
-            let v = binder.getFilteredValue(fieldValueName, filter);
-            if (v != null) {
-                r.push(v);
-            }
+            data.push(binder.getValue());
         }
-        return r;
+
+        //Trasnform data into JSON
+        data = JSON.stringify(data);
+
+        //Transform json data into base64
+        data = layer.toBase64(data);
+
+        //Append data to DataForm object
+        layer.extraData.append(layer.dataFieldName, data);
+
+        //Prepare brigde and send
+        var bridge = new KDServerBridge(
+            url,
+            layer.extraData,
+            function (data) {
+                //layer.loaded(data);
+                if (success_callback != undefined) {
+                    success_callback(data);
+                }
+            },
+            error_callback,
+            method,
+            mimeType
+        );
+
+        //Send request
+        bridge.send();
+
+        return layer;
     }
+
     return layer;
 }
 
@@ -1233,30 +1221,5 @@ var kdStyleBackgroundColor = function (color) {
 
 
 
-/*
-vcc.bind = function (data, binder) {
-        if (data != undefined) vcc.data = data;
-        if (binder == undefined) binder = vcc;
 
-        for (let c of vcc.components) {
-            // set a reference for data row on each component
-            c.data = data;
 
-            //Setting values from initial data
-            if (binder.data[c.name] != undefined) {
-                //Set value of each component
-                c.setValue(binder.data[c.name])
-                // bind on change event
-                c.dom.addEventListener("change", function () {
-                    binder.data[c.name] = c.getValue();
-                    binder.onDataChanged(binder.data);
-                });
-            }
-            // Bind children
-            if (c.bind != undefined) {
-                c.bind(binder.data, binder);
-            }
-        }
-        return vcc;
-    }
-    */

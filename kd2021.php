@@ -12,13 +12,14 @@ class KDPDO
     public $lastInsertId = null;
     private $OK = "OK";
     private $INVALID = "INVALID";
+    public $root = "root";
 
 
     public function __construct($connection, $datasetName)
     {
         $this->connection = $connection;
         if (isset($_REQUEST[$datasetName])) {
-            $this->data = json_decode($this->fromBase64($_REQUEST[$datasetName]));
+            $this->data = json_decode($this->fromBase64($_REQUEST[$datasetName],true));
         }
     }
 
@@ -43,8 +44,7 @@ class KDPDO
                 $stmt->execute();
             }
             $rows = $stmt->fetchAll(PDO::FETCH_NAMED);
-            $json = json_encode($rows);
-            return $json;
+            return $rows;
         } catch (PDOException $e) {
             echo "Error quaerying: " . $e->getMessage() . "\nSQL=" . $sql;
             die();
@@ -73,6 +73,14 @@ class KDPDO
             die();
         }
     }
+
+
+    public function send($data)
+    {
+        $r = json_encode($data);
+        print_r($r);
+    }
+
 
     public function fromBase64($bin)
     {
