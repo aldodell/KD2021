@@ -243,7 +243,7 @@ class KDComponent extends KDObject {
         this.addEvent = function (eventType, callback) {
             var comp = this;
             this.dom.addEventListener(eventType, function () { callback(comp) });
-            this.eventHandlers.push({ "eventType": eventType, "callback": callback })
+            this.eventHandlers.push({ "eventType": eventType, "callback": callback, "direct": false })
             return this;
         }
 
@@ -256,7 +256,7 @@ class KDComponent extends KDObject {
         this.addEventDirectly = function (eventType, callback) {
             var comp = this;
             this.dom.addEventListener(eventType, callback);
-            this.eventHandlers.push({ "eventType": eventType, "callback": callback })
+            this.eventHandlers.push({ "eventType": eventType, "callback": callback, "direct": true })
             return this;
         }
 
@@ -267,14 +267,16 @@ class KDComponent extends KDObject {
             obj.dom = obj.dom.cloneNode(true);
             obj.dom.id = obj.id;
 
-            for (let e of obj.eventHandlers) {
+            for (let e of this.eventHandlers) {
                 let et = e.eventType;
                 let cb = e.callback;
-                obj.dom.addEventListener(et, function () { cb(obj) });
+                if (e.direct) {
+                    obj.dom.addEventListener(et, cb);
+                } else {
+                    obj.dom.addEventListener(et, function () { cb(obj) });
+                }
+
             }
-
-
-
             return obj;
         }
 
@@ -356,6 +358,19 @@ class KDVisualComponent extends KDComponent {
             this.dom.style.left = this.suffixGraphicUnit(value);
             return this;
         }
+
+        this.setBottom = function (value) {
+            this.dom.style.bottom = this.suffixGraphicUnit(value);
+            return this;
+        }
+
+        this.setRight = function (value) {
+            this.dom.style.right = this.suffixGraphicUnit(value);
+            return this;
+        }
+
+
+
 
         this.setEnabled = function (boolValue) { this.dom.disabled = !boolValue; return this; }
 
@@ -670,11 +685,10 @@ function kdBinder(properties) {
         }
 
         for (let c of vcc.components) {
-            if (c.name == "*") {
-                c.setValue(data);
-            } else {
-                if (data[c.name] != undefined) {
-                    c.setValue(data[c.name])
+            let name = c.name.trim();
+            if (name != "") {
+                if (data[name] != undefined) {
+                    c.setValue(data[name]);
                 }
             }
         }
@@ -797,7 +811,7 @@ function kdJsonAdapter(properties) {
      * @param {*} data 
      */
     layer.loaded = function (data) {
-        data = eval(data);
+        data = JSON.parse(data);
         for (let row of data) {
             var newBinder = layer.binder.clone();
             layer.wrap(newBinder);
@@ -923,6 +937,10 @@ function kdImage(properties) {
         return this;
     }
 
+    vc.getValue = function () {
+        return vc.value;
+    }
+
     return vc;
 }
 
@@ -932,22 +950,45 @@ function kdImageWithButtons(properties) {
     properties.htmlClass = "div";
 
     var vcc = new KDVisualContainerComponent(properties);
-
+    vcc.kdReflector = "kdImageWithButtons";
 
     vcc.wrap(
         kdImage(),
-        kdButton()
+        kdButton(kdStyler({ "position": "relative" }))
             .setValue("X")
+            .setWidth(32)
+            .setHeight(32)
+            .setBottom(16)
+            .setRight(32)
     )
 
-    vcc.setName = function (name) { vcc.components[0].setName(name); return vcc; }
-    vcc.setValuePrefix = function (fix) { vcc.components[0].setValuePrefix(fix); return vcc; }
-    vcc.setValueSuffix = function (fix) { vcc.components[0].setValueSuffix(fix); return vcc; }
+    vcc.setValuePrefix = function (fix) {
+        vcc.components[0].setValuePrefix(fix);
+        return vcc;
+    }
+    vcc.setValueSuffix = function (fix) {
+        vcc.components[0].setValueSuffix(fix);
+        return vcc;
+    }
+    vcc.setHeight = function (value) {
+        vcc.components[0].setHeight(value);
+        return vcc;
+    }
+    vcc.setWidth = function (value) {
+        vcc.components[0].setWidth(value);
+        return vcc;
+    }
     vcc.setValue = function (value) {
+        vcc.value = value;
         vcc.components[0].setValue(value);
         return vcc;
     }
 
+    vcc.getValue = function () {
+        return vcc.components[0].getValue();
+    }
+
+    vcc.components[1].addEvent("click", function (c) { alert(c) })
 
     return vcc;
 
