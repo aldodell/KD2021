@@ -6,20 +6,24 @@ var KD_ID = 0;
 /** Base class of Kicsy obects */
 class KDObject {
     constructor(properties) {
+
         this.kdReflector = "KDObject";
-        this.getId = function () { this.id = "KD_" + (++KD_ID); }
+        this.getId = function () {
+            this.id = "KD_" + (++KD_ID);
+        }
+
         this.getId();
 
         //Check properties nullity
         if (properties == undefined) properties = {};
 
         //process each property
-        for (var p in properties) {
+        for (let p in properties) {
             this[p] = properties[p];
         }
 
         // This is an assign function that copies full descriptors
-        this.completeAssign = function completeAssign(target, ...sources) {
+        this.completeAssign = function (target, ...sources) {
             sources.forEach(source => {
                 let descriptors = Object.keys(source).reduce((descriptors, key) => {
                     descriptors[key] = Object.getOwnPropertyDescriptor(source, key);
@@ -177,7 +181,10 @@ class KDComponent extends KDObject {
         this.name = this.id;
 
         /** Send to body current KDs components */
-        this.sendToBody = function () { document.getElementsByTagName("body")[0].appendChild(this.dom); return this; }
+        this.sendToBody = function () {
+            document.getElementsByTagName("body")[0].appendChild(this.dom);
+            return this;
+        }
 
         //Define a value if is undefined
         if (this.value == undefined) { this.value = {} }
@@ -254,7 +261,6 @@ class KDComponent extends KDObject {
          * @returns 
          */
         this.addEventDirectly = function (eventType, callback) {
-            var comp = this;
             this.dom.addEventListener(eventType, callback);
             this.eventHandlers.push({ "eventType": eventType, "callback": callback, "direct": true })
             return this;
@@ -268,12 +274,10 @@ class KDComponent extends KDObject {
             obj.dom.id = obj.id;
 
             for (let e of this.eventHandlers) {
-                let et = e.eventType;
-                let cb = e.callback;
                 if (e.direct) {
-                    obj.dom.addEventListener(et, cb);
+                    obj.dom.addEventListener(e.eventType, e.callback);
                 } else {
-                    obj.dom.addEventListener(et, function () { cb(obj) });
+                    obj.dom.addEventListener(e.eventType, function () { e.callback(obj) });
                 }
 
             }
@@ -370,11 +374,15 @@ class KDVisualComponent extends KDComponent {
         }
 
 
+        this.setEnabled = function (boolValue) {
+            this.dom.disabled = !boolValue;
+            return this;
+        }
 
-
-        this.setEnabled = function (boolValue) { this.dom.disabled = !boolValue; return this; }
-
-        this.setHint = function (text) { this.dom.placeholder = text; return this; }
+        this.setHint = function (text) {
+            this.dom.placeholder = text;
+            return this;
+        }
     }
 }
 
@@ -476,15 +484,32 @@ function kdStyler(args) {
 
     }
 
-    var z = {}
+
+    var z = {};
     z.style = r;
 
+    /**
+     * Show styles
+     * @param {*} r 
+     * @returns 
+     */
     z.toString = function (r) {
         if (r == undefined) r = "";
         for (let key of Object.keys(this.style)) {
             r = r + key + ":" + this.style[key] + "\n";
         }
         return r;
+    }
+
+    /**
+     * Apply this style to kdVisualComponent
+     * @param {*} kdVisualComponent 
+     */
+    z.apply = function (kdVisualComponent) {
+        for (let key of Object.keys(z.style)) {
+            kdVisualComponent.dom.style[key] = z.style[key];
+        }
+        return z;
     }
 
 
@@ -928,19 +953,17 @@ function kdImage(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "img";
     var vc = new KDVisualComponent(properties);
-    //overide parent setValue
 
+    //overide parent setValue
     vc.setValue = function (url) {
         vc.value = url;
         url = vc.prepareValue(url);
         vc.dom.src = url;
         return this;
     }
-
     vc.getValue = function () {
         return vc.value;
     }
-
     return vc;
 }
 
@@ -954,13 +977,16 @@ function kdImageWithButtons(properties) {
 
     vcc.wrap(
         kdImage(),
-        kdButton(kdStyler({ "position": "relative" }))
+        kdButton()
             .setValue("X")
             .setWidth(32)
             .setHeight(32)
             .setBottom(16)
             .setRight(32)
     )
+
+
+    kdStyler({ "position": "relative" }).apply(vcc.components[1]);
 
     vcc.setValuePrefix = function (fix) {
         vcc.components[0].setValuePrefix(fix);
@@ -988,7 +1014,12 @@ function kdImageWithButtons(properties) {
         return vcc.components[0].getValue();
     }
 
-    vcc.components[1].addEvent("click", function (c) { alert(c) })
+    vcc.onClickHandler = function (c) {
+        var t = c.parent.components[0].getValue();
+        alert(t);
+    }
+
+    vcc.components[1].addEvent("click", vcc.onClickHandler)
 
     return vcc;
 
