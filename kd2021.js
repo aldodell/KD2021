@@ -186,7 +186,7 @@ class KDComponent extends KDObject {
 
         var it = this;
         this.name = this.id;
-        
+
         /** Set name field. Used with binder works */
         this.setName = function (name) { this.name = name; if (this.dom.name != undefined) { this.dom.name = name; } return this; }
 
@@ -776,6 +776,7 @@ function kdBinder(properties) {
         return vcc;
     }
 
+    vcc.getValue = function () { return vcc.name; }
 
     vcc.clone = function () {
         let vcc2 = kdBinder(properties);
