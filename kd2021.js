@@ -75,6 +75,13 @@ class KDObject {
             return r;
         }
 
+        this.setTag = function (value) {
+            this.tag = value;
+            return this;
+        }
+
+        this.getTag = function () { return this.tag; }
+
     }
 }
 
@@ -179,6 +186,10 @@ class KDComponent extends KDObject {
 
         var it = this;
         this.name = this.id;
+        
+        /** Set name field. Used with binder works */
+        this.setName = function (name) { this.name = name; if (this.dom.name != undefined) { this.dom.name = name; } return this; }
+
 
         /** Send to body current KDs components */
         this.sendToBody = function () {
@@ -187,7 +198,7 @@ class KDComponent extends KDObject {
         }
 
         //Define a value if is undefined
-        if (this.value == undefined) { this.value = {} }
+        if (this.value == undefined) { this.value = "" }
 
         //Handling suffix and prefix values
         this.valuePrefix = undefined;
@@ -233,8 +244,6 @@ class KDComponent extends KDObject {
         /** Get an object with name and value properties */
         this.getObject = function () { var o = {}; o[this.name] = this.getValue(); return o }
 
-        /** Set name field. Used with binder works */
-        this.setName = function (name) { this.name = name; if (this.dom != undefined) { this.dom.name = name; } return this; }
 
         /**
          * 
@@ -288,8 +297,6 @@ class KDComponent extends KDObject {
         /** Manage onChange event on HTML subaycent object */
         this.setChangeHandler = function (code) { this.addEvent("change", code); return this }
 
-        //Component name. It used to identify the component for binders works
-        this.name = "";
 
         //Check html class
         if (this.htmlClass == null) { this.htmlClass = "div" }
@@ -383,6 +390,41 @@ class KDVisualComponent extends KDComponent {
             this.dom.placeholder = text;
             return this;
         }
+
+        this.setContentEditable = function (booleanValue) {
+            this.dom.contentEditable = booleanValue;
+            return this;
+        }
+
+        this.setTabIndex = function (value) {
+            this.dom.tabIndex = value;
+            return this;
+        }
+
+
+
+        this.setCaretPosition = function (caretPos) {
+            var elem = this.dom;
+
+            if (elem != null) {
+                if (elem.createTextRange) {
+                    var range = elem.createTextRange();
+                    range.move('character', caretPos);
+                    range.select();
+                }
+                else {
+                    if (elem.selectionStart) {
+                        elem.focus();
+                        elem.setSelectionRange(caretPos, caretPos);
+                    }
+                    else
+                        elem.focus();
+                }
+            }
+            return this;
+        }
+
+
     }
 }
 
@@ -668,6 +710,7 @@ function kdBinder(properties) {
 
     /** Data reference object */
     vcc.data = {}
+
     /** Event onDataChanged */
     vcc.onDataChanged = function (object) { }
 
@@ -702,6 +745,13 @@ function kdBinder(properties) {
     }
 
 
+    /**
+     * Set children's components values. If there is a KDBinder as child, it's name design a property name
+     * wich could have some data objects.
+     * If it's neccesary to pass all data from parent data, the child binder name must be set at "*"
+     * @param {*} data 
+     * @returns 
+     */
     vcc.setValue = function (data) {
         if (data == undefined) {
             data = vcc.data;
@@ -710,13 +760,20 @@ function kdBinder(properties) {
         }
 
         for (let c of vcc.components) {
+            c.setTag(data);
             let name = c.name.trim();
             if (name != "") {
-                if (data[name] != undefined) {
-                    c.setValue(data[name]);
+                if (name == "*") {
+                    c.setValue(data);
+                } else {
+                    if (data[name] != undefined) {
+                        c.setValue(data[name]);
+                    }
                 }
             }
+
         }
+        return vcc;
     }
 
 
@@ -726,6 +783,7 @@ function kdBinder(properties) {
             vcc2.wrap(c.clone())
         }
         vcc2.extraData = vcc.extraData;
+        vcc2.name = vcc.name;
         return vcc2;
     }
 
@@ -949,6 +1007,14 @@ function kdTextField(properties) {
 }
 
 
+function kdMultilineTextField(properties) {
+    if (properties == undefined) properties = {};
+    properties.htmlClass = "textarea";
+    return new KDVisualComponent(properties);
+
+}
+
+
 function kdImage(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "img";
@@ -956,9 +1022,12 @@ function kdImage(properties) {
 
     //overide parent setValue
     vc.setValue = function (url) {
-        vc.value = url;
-        url = vc.prepareValue(url);
-        vc.dom.src = url;
+        this.value = url;
+        url = this.prepareValue(url);
+        setTimeout(function (p) {
+            p.dom.setAttribute("src", url);
+        }, 1000, this);
+
         return this;
     }
     vc.getValue = function () {
@@ -968,62 +1037,6 @@ function kdImage(properties) {
 }
 
 
-function kdImageWithButtons(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "div";
-
-    var vcc = new KDVisualContainerComponent(properties);
-    vcc.kdReflector = "kdImageWithButtons";
-
-    vcc.wrap(
-        kdImage(),
-        kdButton()
-            .setValue("X")
-            .setWidth(32)
-            .setHeight(32)
-            .setBottom(16)
-            .setRight(32)
-    )
-
-
-    kdStyler({ "position": "relative" }).apply(vcc.components[1]);
-
-    vcc.setValuePrefix = function (fix) {
-        vcc.components[0].setValuePrefix(fix);
-        return vcc;
-    }
-    vcc.setValueSuffix = function (fix) {
-        vcc.components[0].setValueSuffix(fix);
-        return vcc;
-    }
-    vcc.setHeight = function (value) {
-        vcc.components[0].setHeight(value);
-        return vcc;
-    }
-    vcc.setWidth = function (value) {
-        vcc.components[0].setWidth(value);
-        return vcc;
-    }
-    vcc.setValue = function (value) {
-        vcc.value = value;
-        vcc.components[0].setValue(value);
-        return vcc;
-    }
-
-    vcc.getValue = function () {
-        return vcc.components[0].getValue();
-    }
-
-    vcc.onClickHandler = function (c) {
-        var t = c.parent.components[0].getValue();
-        alert(t);
-    }
-
-    vcc.components[1].addEvent("click", vcc.onClickHandler)
-
-    return vcc;
-
-}
 
 function kdCheckBox(properties) {
     if (properties == undefined) properties = {};
@@ -1060,9 +1073,9 @@ function kdLabel(properties) {
     properties.htmlClass = "label";
     var vc = new KDVisualComponent(properties);
     vc.setValue = function (value) {
-        vc.value = value;
-        vc.dom.appendChild(vc.dom.ownerDocument.createTextNode(value));
-        return vc;
+        this.value = value;
+        this.dom.innerHTML = this.prepareValue(value);
+        return this;
     }
     return vc;
 
@@ -1091,6 +1104,35 @@ function kdProgress(properties) {
     return vc;
 
 }
+
+
+
+
+/**
+ * Function wich return a hperlink. 
+ * Note override setValue method accept an object with two properties. 
+ * First is a hiperlink text, and second the label.
+ * @param {*} properties 
+ * @returns 
+ */
+function kdHiperlink(properties) {
+    if (properties == undefined) properties = {};
+    properties.htmlClass = "a";
+    let vc = new KDVisualComponent(properties);
+
+    vc.setValue = function (value) {
+        vc.value = value;
+        let href = vc.prepareValue(value[1]);
+        let label = value[0];
+        vc.dom.setAttribute("href", href);
+        vc.dom.innerHTML = label;
+        return vc;
+
+    }
+
+    return vc;
+}
+
 
 
 
@@ -1223,24 +1265,90 @@ class Alive extends KDApplication {
 var kdStyleSimpleShadow = function () { return kdStyler({ "boxShadow": "4px 4px 4px gray" }); }
 var kdStyleDisplayBlock = function () { return kdStyler({ "display": "block" }); }
 var kdStyleDisplayInline = function () { return kdStyler({ "display": "inline" }); }
-var kdStyleWidthPercent = function (value) {
-    if (value == undefined) value = 100;
-    var s = value + "%";
-    console.log(s)
-    return kdStyler({ "width": s })
+var kdStyleDisplayInlineBlock = function () { return kdStyler({ "display": "inline-block" }); }
+var kdStyleDisplayFlex = function () { return kdStyler({ "display": "flex" }); }
+
+var kdStyleSizeParameter = function (value, defaultValue, parameter) {
+    if (value == undefined) value = defaultValue;
+    if (typeof (value) === "number") {
+        var s = value + kdDefaultGraphicUnit;
+    } else {
+        s = value;
+    }
+    var obj = {};
+    obj[parameter] = s;
+    console.log(obj);
+    return kdStyler(obj);
 }
 
-/**
- * Return width with kdDefaultGraphicUnit
- * @param {*} value 
- * @returns 
- */
-var kdStyleWidth = function (value) {
-    if (value == undefined) value = 100;
-    var s = value + kdDefaultGraphicUnit;
-    console.log(s)
-    return kdStyler({ "width": s })
+var kdStyleHeight = function (value) {
+    return kdStyleSizeParameter(value, 100, "height");
 }
+
+var kdStyleMinHeight = function (value) {
+    return kdStyleSizeParameter(value, 100, "minHeight");
+}
+
+var kdStyleMaxHeight = function (value) {
+    return kdStyleSizeParameter(value, 100, "maxHeight");
+}
+
+var kdStyleWidth = function (value) {
+    return kdStyleSizeParameter(value, 100, "width");
+}
+
+var kdStyleMinWidth = function (value) {
+    return kdStyleSizeParameter(value, 100, "minWidth");
+}
+
+var kdStyleMaxWidth = function (value) {
+    return kdStyleSizeParameter(value, 100, "maxWidth");
+}
+
+
+var kdStyleSize = function (width, height) {
+    let r = kdStyler(kdStyleWidth(width), kdStyleHeight(height));
+    return r;
+
+}
+
+var kdStyleMinSize = function (width, height) {
+    let r = kdStyler(kdStyleMinWidth(width), kdStyleMinHeight(height));
+    return r;
+
+}
+
+var kdStyleMaxSize = function (width, height) {
+    let r = kdStyler(kdStyleMaxWidth(width), kdStyleMaxHeight(height));
+    return r;
+}
+
+
+
+var kdStyleOneOrFewParameters = function (parameters, styleTag) {
+    let r = "";
+    if (parameters != undefined) {
+        for (let p of parameters) {
+            if (typeof (p) === "number") { p = p + kdDefaultGraphicUnit }
+            r = r + p + " ";
+        }
+        r = r.trim();
+    }
+    let obj = {}
+    obj[styleTag] = r;
+    r = kdStyler(obj);
+    return r;
+}
+
+
+var kdStyleMargin = function () {
+    return kdStyleOneOrFewParameters(arguments, "margin");
+}
+
+var kdStylePadding = function () {
+    return kdStyleOneOrFewParameters(arguments, "padding");
+}
+
 
 var kdStyleBorder = function (size, color, style) {
     if (size == undefined) size = 1;
@@ -1255,41 +1363,50 @@ var kdStyleCenterHorizontally = function () {
     return kdStyler({ "margin": "0 auto" });
 }
 
-var kdStyleMargin = function () {
-    var s = "";
-    if (arguments.length == 1) {
-        var n = arguments[0];
-        s = n + (!isNaN(n) ? kdDefaultGraphicUnit : "");
-    } else {
-        for (let n of arguments) {
-            s = s + n + (!isNaN(n) ? kdDefaultGraphicUnit : "") + " ";
-        }
-        s = s.trim();
-    }
-    console.log(s);
-    return kdStyler({ "margin": s });
-}
-
-
-var kdStylePadding = function () {
-    var s = "";
-    if (arguments.length == 1) {
-        var n = arguments[0];
-        s = n + (!isNaN(n) ? kdDefaultGraphicUnit : "");
-    } else {
-        for (let n of arguments) {
-            s = s + n + (!isNaN(n) ? kdDefaultGraphicUnit : "") + " ";
-        }
-        s = s.trim();
-    }
-    console.log(s);
-    return kdStyler({ "padding": s });
-}
-
 
 var kdStyleBackgroundColor = function (color) {
     return kdStyler({ "backgroundColor": color });
 }
+
+var kdStyleVerticalScrollBar = function (value) {
+    if (value == undefined) value = "scroll";
+    return kdStyler({ "overflowY": value });
+}
+
+var kdStyleVerticalAlign = function (value) {
+    if (value == undefined) value = "top";
+    return kdStyler({ "verticalAlign": value });
+}
+
+var kdStylePosition = function (type, top, right, bottom, left) {
+    if (type == undefined) type = "absolute";
+    var z = kdStyler({ "position": type });
+
+    if (top != undefined) {
+        top = top + (!isNaN(top) ? kdDefaultGraphicUnit : "");
+        z.style.top = top;
+    }
+
+    if (right != undefined) {
+        right = right + (!isNaN(right) ? kdDefaultGraphicUnit : "");
+        z.style.right = right;
+    }
+
+    if (bottom != undefined) {
+        bottom = bottom + (!isNaN(bottom) ? kdDefaultGraphicUnit : "");
+        z.style.bottom = bottom;
+    }
+
+    if (left != undefined) {
+        left = left + (!isNaN(left) ? kdDefaultGraphicUnit : "");
+        z.style.left = left;
+    }
+
+    return z;
+}
+
+var kdStyleFontColor = function (color) { return (kdStyler({ "color": color })) }
+var kdStyleFontSize = function () { return kdStyleOneOrFewParameters(arguments, "fontSize") }
 
 
 

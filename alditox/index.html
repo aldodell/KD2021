@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<html>
+<style>
+    .palabrasClave {
+        color: burlywood;
+    }
+</style>
+
+<body>
+</body>
+
+
+<script src="../kd2021.js"></script>
+<script>
+
+
+    var estiloTerminal = kdStyler(
+        kdStyleBackgroundColor("black"),
+        kdStyleFontColor("green"),
+        kdStyleSize("80vw", "40vh"),
+        kdStylePadding(8),
+        kdStyleFontSize(18)
+
+    );
+
+
+
+    var estiloCodigo = kdStyler(
+
+        kdStyleSize("80vw", "40vh"),
+        kdStylePadding(8),
+        kdStyleFontSize(18)
+
+    );
+
+
+    var estiloPalabrasReservadas = kdStyler(
+        kdStyleFontColor("yellow"),
+    );
+
+
+
+    /* Objetos de patrones de procesamiento */
+
+    class instruccion {
+        constructor(patron, ejecutor) {
+            this.patron = patron;///\w+/;
+            this.ejecutor = ejecutor;// function () { alert("hola mundo") }
+        }
+    }
+
+
+    var instruccionesValidas = [];
+    instruccionesValidas.push(new instruccion(/hola/, function () { alert("hola mundo") }));
+
+
+    var palabrasReservadas = [];
+    palabrasReservadas.push("ayuda");
+    palabrasReservadas.push("crear");
+    palabrasReservadas.push("de");
+
+    /* PROCESADOR DE CODIGOS */
+    function capturarEntrada(ev) {
+
+        if (ev.code == "Enter") {
+            let start = ev.target.selectionStart == undefined ? 0 : ev.target.selectionStart;
+            let content = entrada.getValue();
+            let a = content.substr(0, start).lastIndexOf("\n");
+            let b = content.substr(start + 1).indexOf("\n");
+            if (a == -1) a = 0;
+            if (b == -1) b = content.length;
+            let ultimaLinea = content.substr(a, b);
+            procesarEntrada(ultimaLinea.trim());
+            colorear(ev.target, start);
+            ev.target.selectionStart = start;
+        }
+    }
+
+
+    function procesarEntrada(linea) {
+        for (let i of instruccionesValidas) {
+            if (i.patron.test(linea)) {
+                i.ejecutor();
+            }
+        }
+
+    }
+
+    function colorear(pos) {
+        let texto = entrada.dom.innerText;
+        for (let p of palabrasReservadas) {
+            let re = new RegExp("\\b(" + p + ")\\b");
+            texto = texto.replace(re, function (m) {
+                return "<span class='palabrasClave'>" + m + "</span>"
+
+            });
+        }
+
+        entrada.dom.innerHTML = texto;
+        codHtml.setValue(texto);
+        entrada.setCaretPosition(pos);
+    }
+
+
+    /* INTERFAZ */
+    var entrada;
+
+    kdLayer(estiloTerminal)
+        .storeIn("entrada")
+        .setTabIndex(0)
+        .addEventDirectly("keypress", capturarEntrada)
+        .setContentEditable(true)
+        .sendToBody()
+
+    kdMultilineTextField(estiloCodigo)
+        .storeIn("codHtml")
+        .sendToBody();
+
+</script>
+
+</html>
