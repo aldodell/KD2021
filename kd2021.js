@@ -41,6 +41,30 @@ class KDObject {
             return target;
         }
 
+        this.cloneArray = function (obj) {
+            let r = [];
+            for (let e of obj) {
+                if (Array.isArray(e)) { e = this.cloneArray(e); }
+                r.push(e);
+            }
+            return r;
+        }
+
+        this.clone = function () {
+            let obj = new KDObject(this.properties);
+
+            for (let key of Object.keys(this)) {
+                let prop = this[key];
+                if (Array.isArray(prop)) {
+                    prop = this.cloneArray(prop);
+                }
+                obj[key] = prop;
+            }
+
+            return obj;
+        }
+
+
         this.toBase64 = function (str) {
             return window.btoa(encodeURIComponent(str));
         }
@@ -275,7 +299,24 @@ class KDComponent extends KDObject {
             return this;
         }
 
+        this.objectClone = this.clone;
+        this.clone = function () {
+            let obj = this.objectClone();
+            obj.dom = obj.dom.cloneNode(true);
 
+            for (let e of this.eventHandlers) {
+                if (e.direct) {
+                    obj.dom.addEventListener(e.eventType, e.callback);
+                } else {
+                    obj.dom.addEventListener(e.eventType, function () { e.callback(obj) });
+                }
+
+            }
+            return obj;
+
+        }
+
+        /*
         this.clone = function () {
             let obj = this.completeAssign({}, this);
             obj.getId();
@@ -292,6 +333,8 @@ class KDComponent extends KDObject {
             }
             return obj;
         }
+        */
+
 
 
         /** Manage onChange event on HTML subaycent object */
@@ -457,6 +500,19 @@ class KDVisualContainerComponent extends KDVisualComponent {
          * Return a component with same properties from parent
          * @returns KDComponent
          */
+
+        this.componentClone = this.clone;
+        this.clone = function () {
+
+            for (let comp of this.components) {
+                obj.wrap(comp.clone());
+            }
+            obj.setValue(this.getValue());
+            return obj;
+
+        }
+
+        /*
         this.clone = function () {
             let obj = this.completeAssign({}, this);
             obj.dom = obj.dom.cloneNode(false);
@@ -469,6 +525,7 @@ class KDVisualContainerComponent extends KDVisualComponent {
             obj.setValue(this.getValue());
             return obj;
         }
+        */
 
 
         /**
@@ -703,6 +760,7 @@ function kdFormData(formData) {
  * @returns 
  */
 function kdBinder(properties) {
+
     //Each KDBinder is a KDLayer
     var vcc = kdLayer(properties);
     vcc.kdReflector = "kdBinder";
@@ -784,7 +842,7 @@ function kdBinder(properties) {
             vcc2.wrap(c.clone())
         }
         vcc2.extraData = vcc.extraData;
-        vcc2.name = vcc.name;
+        vcc2.setName(vcc.name);
         return vcc2;
     }
 
