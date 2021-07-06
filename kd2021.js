@@ -14,6 +14,14 @@ class KDObject {
 
         this.getId();
 
+        this.setId = function (ID) {
+            this.id = ID;
+            if (this.dom != undefined) {
+                this.dom.id = ID;
+            }
+            return this;
+        }
+
         //Check properties nullity
         if (properties == undefined) properties = {};
 
@@ -762,7 +770,7 @@ function kdFormData(formData) {
 function kdBinder(properties) {
 
     //Each KDBinder is a KDLayer
-    var vcc = kdLayer(properties);
+    let vcc = kdLayer(properties);
     vcc.kdReflector = "kdBinder";
     vcc.extraData = {};
 
@@ -789,7 +797,7 @@ function kdBinder(properties) {
      * @returns A object with kdComponents values
      */
     vcc.getValue = function () {
-        let data = vcc.extraData;
+        var data = vcc.extraData;
         for (let c of vcc.components) { //Each component of a jsonAdapter are binders
             if (c.name != undefined) {
                 let name = c.name.trim();
@@ -817,33 +825,46 @@ function kdBinder(properties) {
             vcc.data = data;
         }
 
+        let row = data;
+
         for (let c of vcc.components) {
-            c.setTag(data);
-            let name = c.name.trim();
+            var name = c.name.trim();
             if (name != "") {
                 if (name == "*") {
-                    c.setValue(data);
+                    c.setValue(row);
                 } else {
-                    if (data[name] != undefined) {
-                        c.setValue(data[name]);
+                    if (row[name] != undefined) {
+                        c.setValue(row[name]);
                     }
                 }
             }
-
         }
+
         return vcc;
     }
+
+
 
     vcc.getValue = function () { return vcc.name; }
 
     vcc.clone = function () {
         let vcc2 = kdBinder(properties);
+        vcc2.setName(vcc.name);
+        vcc2.extraData = vcc.extraData;
         for (let c of vcc.components) {
             vcc2.wrap(c.clone())
         }
-        vcc2.extraData = vcc.extraData;
-        vcc2.setName(vcc.name);
         return vcc2;
+    }
+
+    vcc.cloneByData = function (data) {
+        var vccs = [];
+        for (let row of data) {
+            let newBinder = vcc.clone();
+            newBinder.setValue(row);
+            vccs.push(newBinder);
+        }
+        return vccs;
     }
 
 
@@ -1078,6 +1099,7 @@ function kdImage(properties) {
     if (properties == undefined) properties = {};
     properties.htmlClass = "img";
     var vc = new KDVisualComponent(properties);
+    vc.kdReflector = "kdImagen";
 
     //overide parent setValue
     vc.setValue = function (url) {
