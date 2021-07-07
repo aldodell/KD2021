@@ -520,21 +520,6 @@ class KDVisualContainerComponent extends KDVisualComponent {
 
         }
 
-        /*
-        this.clone = function () {
-            let obj = this.completeAssign({}, this);
-            obj.dom = obj.dom.cloneNode(false);
-            obj.getId();
-            obj.dom.id = obj.id;
-            obj.components = [];
-            for (let comp of this.components) {
-                obj.wrap(comp.clone());
-            }
-            obj.setValue(this.getValue());
-            return obj;
-        }
-        */
-
 
         /**
          * Clear a node in specific position or all children if position==undefined
@@ -759,6 +744,8 @@ function kdFormData(formData) {
 
 
 
+
+
 /**
  * Return a special kdLayer to wrap kdComponents and syncronize it with data
  * using "data" property. This property is a javascript object wich have properties like
@@ -860,9 +847,22 @@ function kdBinder(properties) {
     vcc.cloneByData = function (data) {
         var vccs = [];
         for (let row of data) {
-            let newBinder = vcc.clone();
-            newBinder.setValue(row);
-            vccs.push(newBinder);
+            if (!Array.isArray(row)) {
+                row = [row];
+            } else {
+                console.log(row);
+            }
+            for (let _row of row) {
+                let newBinder = vcc.clone();
+                if (vcc.name == "*") {
+                    newBinder.setValue(_row);
+                } else {
+                    if (_row[vcc.name] != undefined) {
+                        newBinder.setValue(_row[vcc.name]);
+                    }
+                }
+                vccs.push(newBinder);
+            }
         }
         return vccs;
     }
@@ -975,11 +975,17 @@ function kdJsonAdapter(properties) {
      */
     layer.loaded = function (data) {
         data = JSON.parse(data);
-        for (let row of data) {
-            var newBinder = layer.binder.clone();
-            layer.wrap(newBinder);
-            newBinder.setValue(row);
+        let cc = layer.binder.cloneByData(data);
+        for (let c of cc) {
+            layer.wrap(c);
         }
+        /*
+         for (let row of data) {
+             var newBinder = layer.binder.clone();
+             layer.wrap(newBinder);
+             newBinder.setValue(row);
+         }
+         */
     }
 
     /**
