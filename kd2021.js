@@ -763,7 +763,6 @@ function kdBinder(properties) {
         if (Array.isArray(data)) {
             for (let row of data) {
                 let newBinder = vcc.clone();
-
                 newBinder.setValue(row);
             }
         } else {
@@ -859,10 +858,49 @@ function kdBinder(properties) {
 }
 
 
+/*
+function kdMultiplex(properties) {
+    var layer = kdLayer(properties);
+
+    layer.wrap = function () {
+        for (let c of arguments) {
+            layer.components.push(c);
+        }
+        return layer;
+    }
+
+    layer.setValue = function (data) {
+        var _data = data;
+        if (!Array.isArray(_data)) {
+            _data = [data];
+        }
+
+        for (let row of _data) {
+            for (let c of layer.components) {
+                let c2 = c.clone();
+                let name = c2.name.trim();
+                if (name == "*") {
+                    c2.setValue(row);
+                } else {
+                    if (row[_data] != undefined) {
+                        c2.setValue(row[_data]);
+                    }
+                }
+                layer.parent.wrap
+            }
+        }
+
+    }
+
+    return layer;
+}
+*/
 
 
 /**
  * Wrapper to perform JSON and XmlRequest activities.
+ * Set values of wrapped components. 
+ * Usually this have an unique component like a kdBinder
  * @param {*} properties 
  * @returns 
  */
@@ -896,11 +934,13 @@ function kdJsonAdapter(properties) {
      * @param {*} binder 
      * @returns 
      */
+    
     layer.wrapBinder = function (binder) {
         binder.parent = layer;
         layer.binder = binder;
         return layer;
     }
+    
 
     /**
      * Dot no use.
@@ -908,7 +948,18 @@ function kdJsonAdapter(properties) {
      */
     layer.loaded = function (data) {
         var _data = JSON.parse(data);
-        layer.binder.setValue(_data);
+        //layer.binder.setValue(_data);
+        for (let c of layer.components) {
+            let name = c.name.trim();
+            if (name == "*") {
+                c.setValue(_data);
+            } else {
+                let row = _data[name];
+                if (row != undefined) {
+                    c.setValue(row);
+                }
+            }
+        }
     }
 
     /**
