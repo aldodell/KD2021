@@ -753,35 +753,51 @@ function kdBinder(properties) {
      * @returns 
      */
     vcc.setValue = function (data) {
-
-        if (data == undefined) {
-            data = vcc.data;
-        } else {
-            vcc.data = data;
-        }
+        this.value = data;
 
         if (Array.isArray(data)) {
             for (let row of data) {
-                let newBinder = vcc.clone();
+                let newBinder = this.clone();
                 newBinder.setValue(row);
             }
         } else {
-            for (let c of vcc.components) {
-                var name = c.name.trim();
+
+
+            for (let comp of this.components) {
+                let name = comp.name.trim();
                 if (name != "") {
                     if (name == "*") {
-                        c.setValue(data);
+                        comp.setValue(data);
                     } else {
-                        if (data[name] != undefined) {
-                            c.setValue(data[name]);
+
+                        let row = data[name];
+                        if (row != undefined) {
+                            comp.setValue(row);
                         }
                     }
                 }
-                vcc.parent.wrap(c);
             }
-        }
 
-        return vcc;
+            /*
+            for (let i = 0; i < this.components.length; i++) {
+                let name = this.components[i].name.trim();
+                if (name != "") {
+                    if (name == "*") {
+                        this.components[i].setValue(data);
+                    } else {
+                        let row = data[name];
+                        if (row != undefined) {
+                            this.components[i].setValue(row);
+                        }
+                    }
+                }
+
+            }
+            */
+
+        }
+        this.parent.wrap(this);
+        return this;
 
     }
 
@@ -858,45 +874,6 @@ function kdBinder(properties) {
 }
 
 
-/*
-function kdMultiplex(properties) {
-    var layer = kdLayer(properties);
-
-    layer.wrap = function () {
-        for (let c of arguments) {
-            layer.components.push(c);
-        }
-        return layer;
-    }
-
-    layer.setValue = function (data) {
-        var _data = data;
-        if (!Array.isArray(_data)) {
-            _data = [data];
-        }
-
-        for (let row of _data) {
-            for (let c of layer.components) {
-                let c2 = c.clone();
-                let name = c2.name.trim();
-                if (name == "*") {
-                    c2.setValue(row);
-                } else {
-                    if (row[_data] != undefined) {
-                        c2.setValue(row[_data]);
-                    }
-                }
-                layer.parent.wrap
-            }
-        }
-
-    }
-
-    return layer;
-}
-*/
-
-
 /**
  * Wrapper to perform JSON and XmlRequest activities.
  * Set values of wrapped components. 
@@ -934,13 +911,13 @@ function kdJsonAdapter(properties) {
      * @param {*} binder 
      * @returns 
      */
-    
+
     layer.wrapBinder = function (binder) {
         binder.parent = layer;
         layer.binder = binder;
         return layer;
     }
-    
+
 
     /**
      * Dot no use.
@@ -948,18 +925,7 @@ function kdJsonAdapter(properties) {
      */
     layer.loaded = function (data) {
         var _data = JSON.parse(data);
-        //layer.binder.setValue(_data);
-        for (let c of layer.components) {
-            let name = c.name.trim();
-            if (name == "*") {
-                c.setValue(_data);
-            } else {
-                let row = _data[name];
-                if (row != undefined) {
-                    c.setValue(row);
-                }
-            }
-        }
+        layer.binder.setValue(_data);
     }
 
     /**
@@ -1182,12 +1148,12 @@ function kdHiperlink(properties) {
     let vc = new KDVisualComponent(properties);
 
     vc.setValue = function (value) {
-        vc.value = value;
-        let href = vc.prepareValue(value["href"]);
+        this.value = value;
+        let href = this.prepareValue(value["href"]);
         let label = value["label"];
-        vc.dom.setAttribute("href", href);
-        vc.dom.innerHTML = label;
-        return vc;
+        this.dom.setAttribute("href", href);
+        this.dom.innerText = label;
+        return this;
 
     }
 
