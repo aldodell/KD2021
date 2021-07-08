@@ -753,26 +753,37 @@ function kdBinder(properties) {
      * @returns 
      */
     vcc.setValue = function (data) {
+
         if (data == undefined) {
             data = vcc.data;
         } else {
             vcc.data = data;
         }
 
-        for (let c of vcc.components) {
-            var name = c.name.trim();
-            if (name != "") {
-                if (name == "*") {
-                    c.setValue(data);
-                } else {
-                    if (data[name] != undefined) {
-                        c.setValue(data[name]);
+        if (Array.isArray(data)) {
+            for (let row of data) {
+                let newBinder = vcc.clone();
+
+                newBinder.setValue(row);
+            }
+        } else {
+            for (let c of vcc.components) {
+                var name = c.name.trim();
+                if (name != "") {
+                    if (name == "*") {
+                        c.setValue(data);
+                    } else {
+                        if (data[name] != undefined) {
+                            c.setValue(data[name]);
+                        }
                     }
                 }
+                vcc.parent.wrap(c);
             }
         }
 
         return vcc;
+
     }
 
 
@@ -780,6 +791,7 @@ function kdBinder(properties) {
         let vcc2 = kdBinder(properties);
         vcc2.setName(vcc.name);
         vcc2.extraData = vcc.extraData;
+        vcc2.parent = vcc.parent;
         for (let c of vcc.components) {
             vcc2.wrap(c.clone())
         }
@@ -896,16 +908,7 @@ function kdJsonAdapter(properties) {
      */
     layer.loaded = function (data) {
         var _data = JSON.parse(data);
-
-        if (!Array.isArray(_data)) {
-            _data = [data];
-        }
-
-        for (let row of _data) {
-            let newBinder = layer.binder.clone();
-            newBinder.setValue(row);
-            layer.wrap(newBinder);
-        }
+        layer.binder.setValue(_data);
     }
 
     /**
