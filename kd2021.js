@@ -570,8 +570,29 @@ function kdLayer(properties) {
     var vcc = new KDVisualContainerComponent(properties);
 
     vcc.setValue = function (value) {
-        vcc.value = value;
-        vcc.dom.innerHTML = value;
+        if (
+            typeof (value) === "string" ||
+            typeof (value) === "number" ||
+            typeof (value) === "boolean"
+
+        ) {
+            vcc.value = value;
+            vcc.dom.innerHTML = value;
+        } else if (typeof (value) === "object") {
+        for (let c of this.components) {
+                if (Array.isArray(value)) {
+                    c.setValue(value);
+                } else {
+                    let name = c.name.trim();
+                    let field = value[name];
+                    if (field != undefined) {
+                        c.setValue(field);
+                    }
+                }
+            }
+
+
+        }
         return vcc;
     }
 
@@ -761,15 +782,12 @@ function kdBinder(properties) {
                 newBinder.setValue(row);
             }
         } else {
-
-
             for (let comp of this.components) {
                 let name = comp.name.trim();
                 if (name != "") {
                     if (name == "*") {
                         comp.setValue(data);
                     } else {
-
                         let row = data[name];
                         if (row != undefined) {
                             comp.setValue(row);
@@ -777,26 +795,9 @@ function kdBinder(properties) {
                     }
                 }
             }
-
-            /*
-            for (let i = 0; i < this.components.length; i++) {
-                let name = this.components[i].name.trim();
-                if (name != "") {
-                    if (name == "*") {
-                        this.components[i].setValue(data);
-                    } else {
-                        let row = data[name];
-                        if (row != undefined) {
-                            this.components[i].setValue(row);
-                        }
-                    }
-                }
-
-            }
-            */
-
+            this.parent.wrap(this);
         }
-        this.parent.wrap(this);
+
         return this;
 
     }
