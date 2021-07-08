@@ -505,6 +505,44 @@ function kdJoiner(objects) {
 }
 
 
+class KDStyler extends KDObject {
+    constructor(args) {
+        this.style = {}
+        for (let p of arguments) {
+            //Verificamos primero si el argumento pasado es otro styler:
+            if (p instanceof KDStyler) {
+                for (let n of Object.keys(p.style)) {
+                    this.style[n] = p.style[n];
+                }
+            } else {
+                for (let n of Object.keys(p)) {
+                    this.style[n][n] = p[n];
+                }
+            }
+        }
+    }
+
+    toString(r) {
+
+        if (r == undefined) r = "";
+        for (let key of Object.keys(this.style)) {
+            r = r + key + ":" + this.style[key] + "\n";
+        }
+        return r;
+
+    }
+
+
+    apply(kdVisualComponent) {
+        for (let key of Object.keys(this.style)) {
+            kdVisualComponent.dom.style[key] = this.style[key];
+        }
+        return this;
+    }
+
+
+}
+
 /** 
  * Return a object with style object inside and styles properties passed through
  * Example: kdButton(kdStyler({"backgroundColor":"red", "margin", "2px"}))
@@ -579,7 +617,7 @@ function kdLayer(properties) {
             vcc.value = value;
             vcc.dom.innerHTML = value;
         } else if (typeof (value) === "object") {
-        for (let c of this.components) {
+            for (let c of this.components) {
                 if (Array.isArray(value)) {
                     c.setValue(value);
                 } else {
