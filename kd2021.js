@@ -1,122 +1,106 @@
 "use strict";
 var KD_ALL = ".*";
 var KD_ID = 0;
+var kdDefaultGraphicUnit = "px";
 
 
 /** Base class of Kicsy obects */
 class KDObject {
     constructor(properties) {
-
+        this.properties = properties;
         this.kdReflector = "KDObject";
-        this.getId = function () {
-            this.id = "KD_" + (++KD_ID);
-        }
-
         this.getId();
-
-        this.setId = function (ID) {
-            this.id = ID;
-            if (this.dom != undefined) {
-                this.dom.id = ID;
-            }
-            return this;
-        }
-
         //Check properties nullity
         if (properties == undefined) properties = {};
-
         //process each property
         for (let p in properties) {
             this[p] = properties[p];
         }
-
-        // This is an assign function that copies full descriptors
-        this.completeAssign = function (target, ...sources) {
-            sources.forEach(source => {
-                let descriptors = Object.keys(source).reduce((descriptors, key) => {
-                    descriptors[key] = Object.getOwnPropertyDescriptor(source, key);
-                    return descriptors;
-                }, {});
-                // by default, Object.assign copies enumerable Symbols too
-                Object.getOwnPropertySymbols(source).forEach(sym => {
-                    let descriptor = Object.getOwnPropertyDescriptor(source, sym);
-                    if (descriptor.enumerable) {
-                        descriptors[sym] = descriptor;
-                    }
-                });
-                Object.defineProperties(target, descriptors);
-            });
-            return target;
-        }
-
-        this.cloneArray = function (obj) {
-            let r = [];
-            for (let e of obj) {
-                if (Array.isArray(e)) { e = this.cloneArray(e); }
-                r.push(e);
-            }
-            return r;
-        }
-
-        this.clone = function () {
-            let obj = new KDObject(this.properties);
-
-            for (let key of Object.keys(this)) {
-                let prop = this[key];
-                if (Array.isArray(prop)) {
-                    prop = this.cloneArray(prop);
-                }
-                obj[key] = prop;
-            }
-
-            return obj;
-        }
-
-
-        this.toBase64 = function (str) {
-            return window.btoa(encodeURIComponent(str));
-        }
-
-        this.fromBase64 = function (bin) {
-            return decodeURIComponent(window.atob(bin));
-        }
-
-        this.storeIn = function (variableName) {
-            window[variableName] = this;
-            return this;
-        }
-
-        /**
-         * Use to import all properties from kdObject to this object.
-         * @param {*} kdObject 
-         */
-        this.apply = function (kdObject) {
-            this.appliedObject = kdObject;
-            this.appliedObject();
-        }
-
-        this.showProperties = function (r) {
-            if (r == undefined) r = "";
-            for (let p in this) {
-                r = r + p + "\n";
-                if (p.showProperties != undefined) {
-                    r = r + "\t\n";
-                    r = p.showProperties(r);
-                }
-            }
-            return r;
-        }
-
-        this.setTag = function (value) {
-            this.tag = value;
-            return this;
-        }
-
-        this.getTag = function () { return this.tag; }
-
     }
+
+    getId() {
+        this.id = "KD_" + (++KD_ID);
+    }
+
+    setId(ID) {
+        this.id = ID;
+        if (this.dom != undefined) {
+            this.dom.id = ID;
+        }
+        return this;
+    }
+
+    cloneArray(obj) {
+        let r = [];
+        for (let e of obj) {
+            if (Array.isArray(e)) { e = this.cloneArray(e); }
+            r.push(e);
+        }
+        return r;
+    }
+
+    clone() {
+        return this.preClone(KDObject, this.properties);
+    }
+
+    preClone(objClass, properties) {
+        let obj = new objClass(properties);
+        for (let key of Object.keys(this)) {
+            let prop = this[key];
+            if (Array.isArray(prop)) {
+                prop = this.cloneArray(prop);
+            }
+            obj[key] = prop;
+        }
+        return obj;
+    }
+
+
+    toBase64(str) {
+        return window.btoa(encodeURIComponent(str));
+    }
+
+    fromBase64(bin) {
+        return decodeURIComponent(window.atob(bin));
+    }
+
+    storeIn(variableName) {
+        window[variableName] = this;
+        return this;
+    }
+
+    /**
+     * Use to import all properties from kdObject to this object.
+     * @param {*} kdObject 
+     */
+    apply(kdObject) {
+        this.appliedObject = kdObject;
+        this.appliedObject();
+    }
+
+    showProperties(r) {
+        if (r == undefined) r = "";
+        for (let p in this) {
+            r = r + p + "\n";
+            if (p.showProperties != undefined) {
+                r = r + "\t\n";
+                r = p.showProperties(r);
+            }
+        }
+        return r;
+    }
+
+    setTag(value) {
+        this.tag = value;
+        return this;
+    }
+
+    getTag() { return this.tag; }
 }
 
+function kdError(msg) {
+    alert(msg);
+}
 
 
 /** Message class wrapper.
@@ -218,137 +202,12 @@ class KDComponent extends KDObject {
 
         var it = this;
         this.name = this.id;
-
-        /** Set name field. Used with binder works */
-        this.setName = function (name) { this.name = name; if (this.dom.name != undefined) { this.dom.name = name; } return this; }
-
-
-        /** Send to body current KDs components */
-        this.sendToBody = function () {
-            document.getElementsByTagName("body")[0].appendChild(this.dom);
-            return this;
-        }
-
         //Define a value if is undefined
         if (this.value == undefined) { this.value = "" }
-
         //Handling suffix and prefix values
         this.valuePrefix = undefined;
         this.valueSuffix = undefined;
-
-        this.setValuePrefix = function (prefix) {
-            this.valuePrefix = prefix;
-            return this;
-        }
-
-        this.setValueSuffix = function (suffix) {
-            this.valueSuffix = suffix;
-            return this;
-        }
-
-
-        /** Add prefix and suffix if any */
-        this.prepareValue = function (value) {
-            if (this.valuePrefix != undefined) {
-                value = this.valuePrefix + value;
-            }
-
-            if (this.valueSuffix != undefined) {
-                value = value + this.valueSuffix;
-            }
-            return value;
-        }
-
-        /**  Set value at dom object. */
-        this.setValue = function (value) {
-            this.value = value;
-            value = this.prepareValue(value);
-            this.dom.value = value;
-            return this;
-        }
-
-        /** Get value from dom value property */
-        this.getValue = function () {
-            this.value = this.dom.value;
-            return this.value;
-        }
-
-        /** Get an object with name and value properties */
-        this.getObject = function () { var o = {}; o[this.name] = this.getValue(); return o }
-
-
-        /**
-         * 
-         */
         this.eventHandlers = [];
-
-        /**
-         * Add an event handler to DOM. 
-         * @param {String} eventType String wich represents event name like "click"
-         * @param {Function} callback Function with a parameter passing itself javascript object.
-         * @returns itself
-         */
-        this.addEvent = function (eventType, callback) {
-            var comp = this;
-            this.dom.addEventListener(eventType, function () { callback(comp) });
-            this.eventHandlers.push({ "eventType": eventType, "callback": callback, "direct": false })
-            return this;
-        }
-
-        /**
-         * Add an event handler to DOM. But directly attached. Is exactly like addEventListener
-         * @param {*} eventType 
-         * @param {*} callback 
-         * @returns 
-         */
-        this.addEventDirectly = function (eventType, callback) {
-            this.dom.addEventListener(eventType, callback);
-            this.eventHandlers.push({ "eventType": eventType, "callback": callback, "direct": true })
-            return this;
-        }
-
-        this.objectClone = this.clone;
-        this.clone = function () {
-            let obj = this.objectClone();
-            obj.dom = obj.dom.cloneNode(true);
-
-            for (let e of this.eventHandlers) {
-                if (e.direct) {
-                    obj.dom.addEventListener(e.eventType, e.callback);
-                } else {
-                    obj.dom.addEventListener(e.eventType, function () { e.callback(obj) });
-                }
-
-            }
-            return obj;
-
-        }
-
-        /*
-        this.clone = function () {
-            let obj = this.completeAssign({}, this);
-            obj.getId();
-            obj.dom = obj.dom.cloneNode(true);
-            obj.dom.id = obj.id;
-
-            for (let e of this.eventHandlers) {
-                if (e.direct) {
-                    obj.dom.addEventListener(e.eventType, e.callback);
-                } else {
-                    obj.dom.addEventListener(e.eventType, function () { e.callback(obj) });
-                }
-
-            }
-            return obj;
-        }
-        */
-
-
-
-        /** Manage onChange event on HTML subaycent object */
-        this.setChangeHandler = function (code) { this.addEvent("change", code); return this }
-
-
         //Check html class
         if (this.htmlClass == null) { this.htmlClass = "div" }
 
@@ -361,18 +220,111 @@ class KDComponent extends KDObject {
 
         //Parent kdComponent
         this.parent = null;
-
-
     }
+
+    /** Set name field. Used with binder works */
+    setName(name) { this.name = name; if (this.dom.name != undefined) { this.dom.name = name; } return this; }
+
+
+    /** Send to body current KDs components */
+    sendToBody() {
+        document.getElementsByTagName("body")[0].appendChild(this.dom);
+        return this;
+    }
+
+    setValuePrefix(prefix) {
+        this.valuePrefix = prefix;
+        return this;
+    }
+
+    setValueSuffix(suffix) {
+        this.valueSuffix = suffix;
+        return this;
+    }
+
+
+    /** Add prefix and suffix if any */
+    prepareValue(value) {
+        if (this.valuePrefix != undefined) {
+            value = this.valuePrefix + value;
+        }
+
+        if (this.valueSuffix != undefined) {
+            value = value + this.valueSuffix;
+        }
+        return value;
+    }
+
+    /**  Set value at dom object. */
+    setValue(value) {
+        this.value = value;
+        value = this.prepareValue(value);
+        this.dom.value = value;
+        return this;
+    }
+
+    /** Get value from dom value property */
+    getValue() {
+        this.value = this.dom.value;
+        return this.value;
+    }
+
+    /** Get an object with name and value properties */
+    getObject() { var o = {}; o[this.name] = this.getValue(); return o }
+
+
+
+
+    /**
+     * Add an event handler to DOM. 
+     * @param {String} eventType String wich represents event name like "click"
+     * @param {Function} callback Function with a parameter passing itself javascript object.
+     * @returns itself
+     */
+    addEvent(eventType, callback) {
+        var comp = this;
+        this.dom.addEventListener(eventType, function () { callback(comp) });
+        this.eventHandlers.push({ "eventType": eventType, "callback": callback, "direct": false })
+        return this;
+    }
+
+    /**
+     * Add an event handler to DOM. But directly attached. Is exactly like addEventListener
+     * @param {*} eventType 
+     * @param {*} callback 
+     * @returns 
+     */
+    addEventDirectly(eventType, callback) {
+        this.dom.addEventListener(eventType, callback);
+        this.eventHandlers.push({ "eventType": eventType, "callback": callback, "direct": true })
+        return this;
+    }
+
+
+    clone() {
+        let obj = super.preClone(KDComponent, this.properties);
+        obj.dom = obj.dom.cloneNode(true);
+        for (let e of this.eventHandlers) {
+            if (e.direct) {
+                obj.dom.addEventListener(e.eventType, e.callback);
+            } else {
+                obj.dom.addEventListener(e.eventType, function () { e.callback(obj) });
+            }
+
+        }
+        return obj;
+    }
+
+    /** Manage onChange event on HTML subaycent object */
+    setChangeHandler(code) { this.addEvent("change", code); return this }
+
 }
 
-var kdDefaultGraphicUnit = "px";
 
 /** Visual component class base */
 class KDVisualComponent extends KDComponent {
     constructor(properties) {
         super(properties);
-
         this.height = 20;
         this.width = 100;
 
@@ -384,100 +336,99 @@ class KDVisualComponent extends KDComponent {
         for (let s in this.style) {
             this.dom.style[s] = this.style[s];
         }
+    }
 
 
-        this.suffixGraphicUnit = function (size) {
-            return isNaN(size) ? size : size + kdDefaultGraphicUnit;
-        }
+    suffixGraphicUnit(size) {
+        return isNaN(size) ? size : size + kdDefaultGraphicUnit;
+    }
 
-        this.setHeight = function (value) {
-            this.height = value;
-            this.dom.style.height = this.suffixGraphicUnit(value);
-            return this;
-        }
+    setHeight(value) {
+        this.height = value;
+        this.dom.style.height = this.suffixGraphicUnit(value);
+        return this;
+    }
 
-        this.setWidth = function (value) {
-            this.width = value;
-            this.dom.style.width = this.suffixGraphicUnit(value);
-            return this;
-        }
+    setWidth(value) {
+        this.width = value;
+        this.dom.style.width = this.suffixGraphicUnit(value);
+        return this;
+    }
 
-        this.getWidth = function () {
-            return this.dom.offsetWidth;
-        }
+    getWidth() {
+        return this.dom.offsetWidth;
+    }
 
-        this.getHeight = function () {
-            return this.dom.offsetHeight;
-        }
-
-
-        this.setTop = function (value) {
-            this.dom.style.top = this.suffixGraphicUnit(value);
-            return this;
-        }
-
-        this.setLeft = function (value) {
-            this.dom.style.left = this.suffixGraphicUnit(value);
-            return this;
-        }
-
-        this.setBottom = function (value) {
-            this.dom.style.bottom = this.suffixGraphicUnit(value);
-            return this;
-        }
-
-        this.setRight = function (value) {
-            this.dom.style.right = this.suffixGraphicUnit(value);
-            return this;
-        }
+    getHeight() {
+        return this.dom.offsetHeight;
+    }
 
 
-        this.setEnabled = function (boolValue) {
-            this.dom.disabled = !boolValue;
-            return this;
-        }
+    setTop(value) {
+        this.dom.style.top = this.suffixGraphicUnit(value);
+        return this;
+    }
 
-        this.setHint = function (text) {
-            this.dom.placeholder = text;
-            return this;
-        }
+    setLeft(value) {
+        this.dom.style.left = this.suffixGraphicUnit(value);
+        return this;
+    }
 
-        this.setContentEditable = function (booleanValue) {
-            this.dom.contentEditable = booleanValue;
-            return this;
-        }
+    setBottom(value) {
+        this.dom.style.bottom = this.suffixGraphicUnit(value);
+        return this;
+    }
 
-        this.setTabIndex = function (value) {
-            this.dom.tabIndex = value;
-            return this;
-        }
+    setRight(value) {
+        this.dom.style.right = this.suffixGraphicUnit(value);
+        return this;
+    }
+
+
+    setEnabled(boolValue) {
+        this.dom.disabled = !boolValue;
+        return this;
+    }
+
+    setHint(text) {
+        this.dom.placeholder = text;
+        return this;
+    }
+
+    setContentEditable(booleanValue) {
+        this.dom.contentEditable = booleanValue;
+        return this;
+    }
+
+    setTabIndex(value) {
+        this.dom.tabIndex = value;
+        return this;
+    }
 
 
 
-        this.setCaretPosition = function (caretPos) {
-            var elem = this.dom;
+    setCaretPosition(caretPos) {
+        var elem = this.dom;
 
-            if (elem != null) {
-                if (elem.createTextRange) {
-                    var range = elem.createTextRange();
-                    range.move('character', caretPos);
-                    range.select();
-                }
-                else {
-                    if (elem.selectionStart) {
-                        elem.focus();
-                        elem.setSelectionRange(caretPos, caretPos);
-                    }
-                    else
-                        elem.focus();
-                }
+        if (elem != null) {
+            if (elem.createTextRange) {
+                var range = elem.createTextRange();
+                range.move('character', caretPos);
+                range.select();
             }
-            return this;
+            else {
+                if (elem.selectionStart) {
+                    elem.focus();
+                    elem.setSelectionRange(caretPos, caretPos);
+                }
+                else
+                    elem.focus();
+            }
         }
-
-
+        return this;
     }
 }
+
 
 
 /** Components with inner components */
@@ -485,58 +436,57 @@ class KDVisualContainerComponent extends KDVisualComponent {
     constructor(properties) {
         super(properties);
         this.components = [];
+    }
 
-        this.wrap = function () {
-            for (let obj of arguments) {
-                if (Array.isArray(obj)) {
-                    for (let o of obj) {
-                        this.dom.appendChild(o.dom);
-                        this.components.push(o);
-                        o.parent = this;
-                    }
-                } else {
-                    this.dom.appendChild(obj.dom);
-                    this.components.push(obj);
-                    obj.parent = this;
+    wrap() {
+        for (let obj of arguments) {
+            if (Array.isArray(obj)) {
+                for (let o of obj) {
+                    this.dom.appendChild(o.dom);
+                    this.components.push(o);
+                    o.parent = this;
                 }
-            }
-            return this;
-        }
-
-
-        /**
-         * Return a component with same properties from parent
-         * @returns KDComponent
-         */
-
-        this.componentClone = this.clone;
-        this.clone = function () {
-
-            for (let comp of this.components) {
-                obj.wrap(comp.clone());
-            }
-            obj.setValue(this.getValue());
-            return obj;
-
-        }
-
-
-        /**
-         * Clear a node in specific position or all children if position==undefined
-         * @param {Int} position 
-         */
-        this.clear = function (position) {
-            if (position == undefined) {
-                this.components = [];
-                this.dom.innerHTML = "";
             } else {
-                this.components.splice(position, 1);
-                this.dom.childNodes[position].remove();
+                this.dom.appendChild(obj.dom);
+                this.components.push(obj);
+                obj.parent = this;
             }
-            return this;
         }
+        return this;
+    }
+
+
+    /**
+     * Return a component with same properties from parent
+     * @returns KDComponent
+     */
+
+
+    clone() {
+        let obj = super.preClone(KDVisualContainerComponent, this.properties);
+        for (let comp of this.components) {
+            obj.wrap(comp.clone());
+        }
+        return obj;
+    }
+
+
+    /**
+     * Clear a node in specific position or all children if position==undefined
+     * @param {Int} position 
+     */
+    clear(position) {
+        if (position == undefined) {
+            this.components = [];
+            this.dom.innerHTML = "";
+        } else {
+            this.components.splice(position, 1);
+            this.dom.childNodes[position].remove();
+        }
+        return this;
     }
 }
+
 
 
 /**
@@ -661,42 +611,43 @@ class KDServerBridge extends KDObject {
         this.method = method;
         this.mimeType = mimeType;
         this.data = data;
+    }
 
 
-        this.send = function () {
-            //Get method
-            if (this.method == undefined) this.method = "post";
+    send() {
+        //Get method
+        if (this.method == undefined) this.method = "post";
 
-            // Define mime
-            if (this.mimeType == undefined) this.mimeType = 'text/xml';
+        // Define mime
+        if (this.mimeType == undefined) this.mimeType = 'text/xml';
 
-            //Define callback
-            if (this.success_callback == undefined) this.success_callback = function (msg) { }
-            if (this.error_callback == undefined) this.error_callback = function (msg) { }
+        //Define callback
+        if (this.success_callback == undefined) this.success_callback = function (msg) { }
+        if (this.error_callback == undefined) this.error_callback = function (msg) { }
 
-            //Create request
-            var http_request = new XMLHttpRequest();
-            http_request.overrideMimeType(this.mimeType);
+        //Create request
+        var http_request = new XMLHttpRequest();
+        http_request.overrideMimeType(this.mimeType);
 
-            var ref = this;
-            //Manage request
-            http_request.onreadystatechange = function () {
-                if (http_request.readyState == 4) {
-                    if (http_request.status == 200) {
-                        ref.success_callback(http_request.responseText);
-                    } else {
-                        ref.error_callback("ERROR loading data from " + url);
-                        console.log("ERROR loading data from " + url);
-                    }
+        var ref = this;
+        //Manage request
+        http_request.onreadystatechange = function () {
+            if (http_request.readyState == 4) {
+                if (http_request.status == 200) {
+                    ref.success_callback(http_request.responseText);
+                } else {
+                    ref.error_callback("ERROR loading data from " + url);
+                    console.log("ERROR loading data from " + url);
                 }
-            };
+            }
+        };
 
-            http_request.open(this.method, this.url, true);
-            http_request.send(this.data);
+        http_request.open(this.method, this.url, true);
+        http_request.send(this.data);
 
-        }
     }
 }
+
 
 /**
  * Return a FormData object joining all FromData passed as arguments
@@ -741,10 +692,6 @@ function kdFormData(formData) {
 
     return obj;
 }
-
-
-
-
 
 /**
  * Return a special kdLayer to wrap kdComponents and syncronize it with data
@@ -812,16 +759,14 @@ function kdBinder(properties) {
             vcc.data = data;
         }
 
-        let row = data;
-
         for (let c of vcc.components) {
             var name = c.name.trim();
             if (name != "") {
                 if (name == "*") {
-                    c.setValue(row);
+                    c.setValue(data);
                 } else {
-                    if (row[name] != undefined) {
-                        c.setValue(row[name]);
+                    if (data[name] != undefined) {
+                        c.setValue(data[name]);
                     }
                 }
             }
@@ -830,9 +775,6 @@ function kdBinder(properties) {
         return vcc;
     }
 
-
-
-    vcc.getValue = function () { return vcc.name; }
 
     vcc.clone = function () {
         let vcc2 = kdBinder(properties);
@@ -844,28 +786,7 @@ function kdBinder(properties) {
         return vcc2;
     }
 
-    vcc.cloneByData = function (data) {
-        var vccs = [];
-        for (let row of data) {
-            if (!Array.isArray(row)) {
-                row = [row];
-            } else {
-                console.log(row);
-            }
-            for (let _row of row) {
-                let newBinder = vcc.clone();
-                if (vcc.name == "*") {
-                    newBinder.setValue(_row);
-                } else {
-                    if (_row[vcc.name] != undefined) {
-                        newBinder.setValue(_row[vcc.name]);
-                    }
-                }
-                vccs.push(newBinder);
-            }
-        }
-        return vccs;
-    }
+
 
 
     /**
@@ -974,18 +895,17 @@ function kdJsonAdapter(properties) {
      * @param {*} data 
      */
     layer.loaded = function (data) {
-        data = JSON.parse(data);
-        let cc = layer.binder.cloneByData(data);
-        for (let c of cc) {
-            layer.wrap(c);
+        var _data = JSON.parse(data);
+
+        if (!Array.isArray(_data)) {
+            _data = [data];
         }
-        /*
-         for (let row of data) {
-             var newBinder = layer.binder.clone();
-             layer.wrap(newBinder);
-             newBinder.setValue(row);
-         }
-         */
+
+        for (let row of _data) {
+            let newBinder = layer.binder.clone();
+            newBinder.setValue(row);
+            layer.wrap(newBinder);
+        }
     }
 
     /**
@@ -1209,8 +1129,8 @@ function kdHiperlink(properties) {
 
     vc.setValue = function (value) {
         vc.value = value;
-        let href = vc.prepareValue(value[1]);
-        let label = value[0];
+        let href = vc.prepareValue(value["href"]);
+        let label = value["label"];
         vc.dom.setAttribute("href", href);
         vc.dom.innerHTML = label;
         return vc;
@@ -1364,7 +1284,6 @@ var kdStyleSizeParameter = function (value, defaultValue, parameter) {
     }
     var obj = {};
     obj[parameter] = s;
-    console.log(obj);
     return kdStyler(obj);
 }
 
@@ -1443,7 +1362,6 @@ var kdStyleBorder = function (size, color, style) {
     if (color == undefined) color = "black";
     if (style == undefined) style = "solid";
     var s = size + " " + color + " " + style;
-    console.log(s);
     return kdStyler({ "border": s })
 }
 var kdStyleCenterHorizontally = function () {
