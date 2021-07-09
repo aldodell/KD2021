@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<html>
+
+
+<body>
+    <script src="/KD2021/gui.js"></script>
+    <script>
+
+        kdLayer()
+            .storeIn("a")
+            .setStyle("backgroundColor", "cyan")
+            .wrap(
+                kdButton()
+                    .setValue("hola mundo")
+                    .setStyle("width", "200px")
+                    .addEvent("click", function () { alert("hola") })
+            )
+            .publish()
+            .clone()
+            .publish()
+            .clone()
+            .publish();
+
+
+    </script>
+</body>
+
+</html>

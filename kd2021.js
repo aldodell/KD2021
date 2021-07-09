@@ -197,22 +197,32 @@ class KDUser {
 
 /** Component base class */
 class KDComponent extends KDObject {
-    constructor(properties) {
+    constructor(properties, htmlClass, htmlType) {
         super(properties);
-
-        var it = this;
         this.name = this.id;
+        this.htmlClass = htmlClass;
+        this.htmlType = htmlType;
+
         //Define a value if is undefined
         if (this.value == undefined) { this.value = "" }
+
         //Handling suffix and prefix values
         this.valuePrefix = undefined;
         this.valueSuffix = undefined;
         this.eventHandlers = [];
+
         //Check html class
         if (this.htmlClass == null) { this.htmlClass = "div" }
 
         //Create DOM
         this.dom = document.createElement(this.htmlClass);
+
+        //Type attribute
+        if (this.htmlType != undefined) {
+            this.dom.setAttribute("type", this.htmlType);
+        }
+
+        //Assign Id
         this.dom.id = this.id;
 
         //Check some common properties
@@ -223,7 +233,11 @@ class KDComponent extends KDObject {
     }
 
     /** Set name field. Used with binder works */
-    setName(name) { this.name = name; if (this.dom.name != undefined) { this.dom.name = name; } return this; }
+    setName(name) {
+        this.name = name;
+        if (this.dom.name != undefined) { this.dom.name = name; }
+        return this;
+    }
 
 
     /** Send to body current KDs components */
@@ -271,8 +285,6 @@ class KDComponent extends KDObject {
 
     /** Get an object with name and value properties */
     getObject() { var o = {}; o[this.name] = this.getValue(); return o }
-
-
 
 
     /**
@@ -323,16 +335,12 @@ class KDComponent extends KDObject {
 
 /** Visual component class base */
 class KDVisualComponent extends KDComponent {
-    constructor(properties) {
-        super(properties);
+    constructor(properties, htmlClass, htmlType) {
+        super(properties, htmlClass, htmlType);
         this.height = 20;
         this.width = 100;
 
-
-        if (this.type != undefined) {
-            this.dom.setAttribute("type", this.type);
-        }
-
+        //Set styles
         for (let s in this.style) {
             this.dom.style[s] = this.style[s];
         }
@@ -405,8 +413,6 @@ class KDVisualComponent extends KDComponent {
         return this;
     }
 
-
-
     setCaretPosition(caretPos) {
         var elem = this.dom;
 
@@ -433,8 +439,8 @@ class KDVisualComponent extends KDComponent {
 
 /** Components with inner components */
 class KDVisualContainerComponent extends KDVisualComponent {
-    constructor(properties) {
-        super(properties);
+    constructor(properties, htmlClass, htmlType) {
+        super(properties, htmlClass, htmlType);
         this.components = [];
     }
 
@@ -463,7 +469,7 @@ class KDVisualContainerComponent extends KDVisualComponent {
 
 
     clone() {
-        let obj = super.preClone(KDVisualContainerComponent, this.properties);
+        let obj = this.preClone(KDVisualContainerComponent, this.properties);
         for (let comp of this.components) {
             obj.wrap(comp.clone());
         }
@@ -507,8 +513,9 @@ function kdJoiner(objects) {
 
 class KDStyler extends KDObject {
     constructor(args) {
+        super();
         this.style = {}
-        for (let p of arguments) {
+        for (let p of args) {
             //Verificamos primero si el argumento pasado es otro styler:
             if (p instanceof KDStyler) {
                 for (let n of Object.keys(p.style)) {
@@ -516,7 +523,7 @@ class KDStyler extends KDObject {
                 }
             } else {
                 for (let n of Object.keys(p)) {
-                    this.style[n][n] = p[n];
+                    this.style[n] = p[n];
                 }
             }
         }
@@ -543,108 +550,40 @@ class KDStyler extends KDObject {
 
 }
 
-/** 
- * Return a object with style object inside and styles properties passed through
- * Example: kdButton(kdStyler({"backgroundColor":"red", "margin", "2px"}))
- */
 function kdStyler(args) {
-    var r = {};
-    for (let p of arguments) {
-
-        //Verificamos primero si el argumento pasado es otro styler:
-        if (p.style == undefined) {
-            for (let n of Object.keys(p)) {
-                r[n] = p[n];
-            }
-        } else {
-            for (let n of Object.keys(p.style)) {
-                r[n] = p.style[n];
-            }
-        }
-
-    }
-
-
-    var z = {};
-    z.style = r;
-
-    /**
-     * Show styles
-     * @param {*} r 
-     * @returns 
-     */
-    z.toString = function (r) {
-        if (r == undefined) r = "";
-        for (let key of Object.keys(this.style)) {
-            r = r + key + ":" + this.style[key] + "\n";
-        }
-        return r;
-    }
-
-    /**
-     * Apply this style to kdVisualComponent
-     * @param {*} kdVisualComponent 
-     */
-    z.apply = function (kdVisualComponent) {
-        for (let key of Object.keys(z.style)) {
-            kdVisualComponent.dom.style[key] = z.style[key];
-        }
-        return z;
-    }
-
-
-    return z;
+    return new KDStyler(arguments);
 }
 
 
-/**
- * Function wich return a KDVisualContainerComponent object with DIV dom for populate with other KDs components
- * @param {*} properties 
- * @returns A KDVisualContainerComponent with DIV style.
- */
-function kdLayer(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "div";
-    var vcc = new KDVisualContainerComponent(properties);
 
-    vcc.setValue = function (value) {
-        if (
-            typeof (value) === "string" ||
-            typeof (value) === "number" ||
-            typeof (value) === "boolean"
+class KDLayer extends KDVisualContainerComponent {
 
-        ) {
-            vcc.value = value;
-            vcc.dom.innerHTML = value;
-        } else if (typeof (value) === "object") {
-            for (let c of this.components) {
-                if (Array.isArray(value)) {
-                    c.setValue(value);
-                } else {
-                    let name = c.name.trim();
-                    let field = value[name];
-                    if (field != undefined) {
-                        c.setValue(field);
-                    }
-                }
-            }
-
-
-        }
-        return vcc;
+    constructor(properties) {
+        super(properties, "div");
     }
 
-    vcc.getValue = function () {
+    getValue() {
         return vcc.dom.innerHTML;
     }
 
-    vcc.setText = function (text) {
-        vcc.dom.innerText = text;
-        return vcc;
+    setValue(value) {
+        this.value = value;
+        this.dom.innerHTML = value;
+        return this;
     }
 
+    setText(text) {
+        vcc.dom.innerText = text;
+        return this;
+    }
 
-    return vcc;
+    clone() {
+        return this.preClone(KDLayer, this.properties);
+    }
+}
+
+function kdLayer(properties) {
+    return new KDLayer(properties);
 }
 
 
@@ -760,38 +699,43 @@ function kdFormData(formData) {
  * @param {*} properties 
  * @returns 
  */
-function kdBinder(properties) {
+class KDBinder extends KDLayer {
+    constructor(properties) {
 
-    //Each KDBinder is a KDLayer
-    let vcc = kdLayer(properties);
-    vcc.kdReflector = "kdBinder";
-    vcc.extraData = {};
+        super(properties);
+        this.properties = properties;
+        this.kdReflector = "kdBinder";
+        this.extraData = {};
 
-    /** Data reference object */
-    vcc.data = {}
+        /** Data reference object */
+        this.data = {}
 
-    /** Event onDataChanged */
-    vcc.onDataChanged = function (object) { }
+        /** Event onDataChanged */
+        this.onDataChanged = function (object) { }
+    }
 
     /** 
      * Assign a function with an only parameter data to retrieve changes when user modify data
      * Example:
      * .setOnDataChanged(function(obj){alert(JSON.stringify(obj))})
      * */
-    vcc.setOnDataChanged = function (code) { vcc.onDataChanged = code; return vcc }
+    setOnDataChanged(code) {
+        this.onDataChanged = code;
+        return this;
+    }
 
-    vcc.appendExtraData = function (key, value) {
-        vcc.extraData[key] = value;
-        return vcc;
+    appendExtraData(key, value) {
+        this.extraData[key] = value;
+        return this;
     }
 
     /**
      * 
      * @returns A object with kdComponents values
      */
-    vcc.getValue = function () {
-        var data = vcc.extraData;
-        for (let c of vcc.components) { //Each component of a jsonAdapter are binders
+    getValue() {
+        var data = this.extraData;
+        for (let c of this.components) { //Each component of a jsonAdapter are binders
             if (c.name != undefined) {
                 let name = c.name.trim();
                 if (name != "") {
@@ -799,7 +743,7 @@ function kdBinder(properties) {
                 }
             }
         }
-        vcc.data = data;
+        this.data = data;
         return data;
     }
 
@@ -811,12 +755,12 @@ function kdBinder(properties) {
      * @param {*} data 
      * @returns 
      */
-    vcc.setValue = function (data) {
+    setValue(data) {
         this.value = data;
 
         if (Array.isArray(data)) {
             for (let row of data) {
-                let newBinder = this.clone();
+                var newBinder = this.clone();
                 newBinder.setValue(row);
             }
         } else {
@@ -841,19 +785,16 @@ function kdBinder(properties) {
     }
 
 
-    vcc.clone = function () {
-        let vcc2 = kdBinder(properties);
-        vcc2.setName(vcc.name);
-        vcc2.extraData = vcc.extraData;
-        vcc2.parent = vcc.parent;
-        for (let c of vcc.components) {
-            vcc2.wrap(c.clone())
+    clone() {
+        var b = new KDBinder(this.properties);
+        b.setName(this.name);
+        b.extraData = this.extraData;
+        b.parent = this.parent;
+        for (let c of this.components) {
+            b.wrap(c.clone())
         }
-        return vcc2;
+        return binder;
     }
-
-
-
 
     /**
      * Return a value from component whith name = fieldValueName
@@ -868,7 +809,7 @@ function kdBinder(properties) {
      * @param {string} fieldValueName 
      * @returns 
      */
-    vcc.getFilteredValue = function (fieldValueName, filter) {
+    getFilteredValue(fieldValueName, filter) {
         var theValue = null;
         var condition = false;
 
@@ -893,10 +834,9 @@ function kdBinder(properties) {
         }
     }
 
-
-    vcc.clear = function () {
-        vcc.data = {};
-        return vcc;
+    clear() {
+        this.data = {};
+        return this;
     }
 
     /**
@@ -904,12 +844,14 @@ function kdBinder(properties) {
      * @param {*} key 
      * @param {*} value 
      */
-    vcc.setDataEntry = function (key, value) {
-        vcc.data[key] = value;
-        return vcc;
+    setDataEntry(key, value) {
+        this.data[key] = value;
+        return this;
     }
+}
 
-    return vcc;
+function kdBinder(properties) {
+    return new KDBinder(properties);
 }
 
 
@@ -920,16 +862,18 @@ function kdBinder(properties) {
  * @param {*} properties 
  * @returns 
  */
-function kdJsonAdapter(properties) {
-    var layer = kdLayer(properties);
-    layer.binder = null;
-    layer.extraData = new FormData();
-    layer.dataFieldName = "data";
+class KDJsonAdapter extends KDLayer {
+    constructor(properties) {
+        super(properties)
+        this.binder = null;
+        this.extraData = new FormData();
+        this.dataFieldName = "data";
+    }
 
     /**
      * Clear extra data form
      */
-    layer.clearExtraData = function () {
+    clearExtraData() {
         layer.extraData = new FormData();
         return layer;
     }
@@ -940,9 +884,9 @@ function kdJsonAdapter(properties) {
      * @param {*} value 
      * @returns 
      */
-    layer.appendExtraData = function (key, value) {
-        layer.extraData.append(key, value);
-        return layer;
+    appendExtraData(key, value) {
+        this.extraData.append(key, value);
+        return this;
     }
 
     /**
@@ -951,10 +895,10 @@ function kdJsonAdapter(properties) {
      * @returns 
      */
 
-    layer.wrapBinder = function (binder) {
-        binder.parent = layer;
-        layer.binder = binder;
-        return layer;
+    wrapBinder(binder) {
+        this.binder = binder;
+        this.binder.parent = this;
+        return this;
     }
 
 
@@ -962,9 +906,10 @@ function kdJsonAdapter(properties) {
      * Dot no use.
      * @param {*} data 
      */
-    layer.loaded = function (data) {
+    loaded(data) {
         var _data = JSON.parse(data);
-        layer.binder.setValue(_data);
+        this.binder.setValue(_data);
+        return this;
     }
 
     /**
@@ -976,17 +921,21 @@ function kdJsonAdapter(properties) {
      * @param {*} mimeType 
      * @returns 
      */
-    layer.load = function (url, success_callback, error_callback, method, mimeType) {
+    load(url, success_callback, error_callback, method, mimeType) {
         //Configure server bridge
+        let adapter = this;
+        let success_callback_wrap = function (data) {
+            adapter.loaded(data);
+            if (success_callback != undefined) {
+                success_callback(data);
+            }
+
+        }
+
         var bridge = new KDServerBridge(
             url,
-            layer.extraData,
-            function (data) {
-                layer.loaded(data);
-                if (success_callback != undefined) {
-                    success_callback(data);
-                }
-            },
+            this.extraData,
+            success_callback_wrap,
             error_callback,
             method,
             mimeType
@@ -995,7 +944,7 @@ function kdJsonAdapter(properties) {
         //Send request
         bridge.send();
 
-        return layer;
+        return this;
     }
 
     /**
@@ -1008,12 +957,12 @@ function kdJsonAdapter(properties) {
      * @param {*} mimeType 
      * @returns 
      */
-    layer.save = function (url, success_callback, error_callback, method, mimeType) {
+    save(url, success_callback, error_callback, method, mimeType) {
 
         var data = [];
 
         //Get values from binder
-        for (let binder of layer.components) {
+        for (let binder of this.components) {
             data.push(binder.getValue());
         }
 
@@ -1021,17 +970,17 @@ function kdJsonAdapter(properties) {
         data = JSON.stringify(data);
 
         //Transform json data into base64
-        data = layer.toBase64(data);
+        data = this.toBase64(data);
 
         //Append data to DataForm object
-        layer.extraData.append(layer.dataFieldName, data);
+        this.extraData.append(this.dataFieldName, data);
 
         //Prepare brigde and send
         var bridge = new KDServerBridge(
             url,
-            layer.extraData,
+            this.extraData,
             function (data) {
-                //layer.loaded(data);
+                //this.loaded(data);
                 if (success_callback != undefined) {
                     success_callback(data);
                 }
@@ -1044,19 +993,27 @@ function kdJsonAdapter(properties) {
         //Send request
         bridge.send();
 
-        return layer;
+        return this;
     }
 
-    return layer;
+
 }
+
+function kdJsonAdapter(properties) {
+    return new KDJsonAdapter(properties);
+}
+
+class KDButton extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "input", "button");
+    }
+}
+
 
 
 /** Function return a Button  */
 function kdButton(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "input";
-    properties.type = "button";
-    return new KDVisualComponent(properties);
+    return new KDButton(properties);
 }
 
 /**
@@ -1064,66 +1021,84 @@ function kdButton(properties) {
  * @param {*} properties 
  * @returns 
  */
+
+class KDTextField extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "input", "text");
+    }
+}
+
 function kdTextField(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "input";
-    properties.type = "text";
-    return new KDVisualComponent(properties);
+    return new KDTextField(properties);
+}
+
+
+
+
+class KDMultilineTextField extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "textarea");
+    }
 }
 
 
 function kdMultilineTextField(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "textarea";
-    return new KDVisualComponent(properties);
-
+    return new KDMultilineTextField(properties);
 }
 
 
-function kdImage(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "img";
-    var vc = new KDVisualComponent(properties);
-    vc.kdReflector = "kdImagen";
+class KDImage extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "img");
+    }
 
-    //overide parent setValue
-    vc.setValue = function (url) {
+    setValue(url) {
         this.value = url;
         url = this.prepareValue(url);
         setTimeout(function (p) {
             p.dom.setAttribute("src", url);
         }, 1000, this);
-
         return this;
     }
-    vc.getValue = function () {
-        return vc.value;
+
+    getValue() {
+        return this.value;
     }
-    return vc;
+
+}
+
+
+function kdImage(properties) {
+    return new KDImage(properties);
 }
 
 
 
-function kdCheckBox(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "input";
-    properties.type = "checkbox";
-    var vc = new KDVisualComponent(properties);
-    vc.getValue = function () { return this.dom.checked }
-    vc.setValue = function (status) { this.dom.checked = status; return vc; }
-    return vc;
+class KDCheckBox extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "input", "checkbox");
+    }
+    getValue() { return this.dom.checked }
+    setValue(status) { this.dom.checked = status; return this; }
+}
 
+function kdCheckBox(properties) {
+    return new KDCheckBox(properties);
+}
+
+class KDSpan extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "span");
+    }
+
+    setValue(value) {
+        this.dom.textContent = value;
+        return this;
+    }
 }
 
 function kdSpan(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "span";
-    var vcc = new KDVisualContainerComponent(properties);
-    vcc.setValue = function (value) {
-        vcc.dom.textContent = value;
-        return vcc;
-    }
-    return vcc;
+    return new KDSpan(properties);
 
 }
 
@@ -1134,41 +1109,59 @@ function kdVerticalScroll(properties) {
 
 }
 
-function kdLabel(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "label";
-    var vc = new KDVisualComponent(properties);
-    vc.setValue = function (value) {
-        this.value = value;
-        this.dom.innerHTML = this.prepareValue(value);
+
+class KDLabel extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "label");
+    }
+
+    setValue(value) {
+        this.value = this.value;
+        this.dom.innerHTML = this.prepareValue(this.value);
         return this;
     }
-    return vc;
+
 
 }
 
 
+function kdLabel(properties) {
+    return new KDLabel(properties);
+}
+
+class KDHorizontalLine extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "hr");
+    }
+
+}
+
 function kdHorizontalLine(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "hr";
-    var vc = new KDVisualComponent(properties);
-    return vc;
+    return new KDHorizontalLine(properties);
+}
+
+
+
+class KDProgressBar extends KDVisualComponent {
+    constructor(properties) {
+        if (properties == undefined) properties = {};
+        if (properties.value == undefined) properties.value = 0;
+        if (properties.max == undefined) properties.max = 1;
+        super(properties, "progress");
+
+
+    }
+
+    setMaximum(max) {
+        this.dom.max = max;
+        return this;
+    }
 
 }
 
 
 function kdProgress(properties) {
-    if (properties == undefined) properties = {};
-    if (properties.value == undefined) properties.value = 0;
-    if (properties.mx == undefined) properties.max = 1;
-    properties.htmlClass = "progress";
-
-    var vc = new KDVisualComponent(properties);
-
-    vc.setMaximum = function (max) { vc.dom.max = max; return vc; }
-
-    return vc;
-
+    return new KDProgressBar(properties);
 }
 
 
@@ -1181,22 +1174,30 @@ function kdProgress(properties) {
  * @param {*} properties 
  * @returns 
  */
-function kdHiperlink(properties) {
-    if (properties == undefined) properties = {};
-    properties.htmlClass = "a";
-    let vc = new KDVisualComponent(properties);
 
-    vc.setValue = function (value) {
+class KDHiperlink extends KDVisualComponent {
+
+    constructor(properties) {
+        super(properties, "a");
+    }
+
+    setValue(value) {
         this.value = value;
         let href = this.prepareValue(value["href"]);
         let label = value["label"];
         this.dom.setAttribute("href", href);
         this.dom.innerText = label;
         return this;
-
     }
 
-    return vc;
+    clone() {
+        return this.preClone(KDHiperlink, this.properties);
+    }
+
+}
+
+function kdHiperlink(properties) {
+    return new KDHiperlink(properties);
 }
 
 
