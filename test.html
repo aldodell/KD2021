@@ -8,20 +8,46 @@
     <script src="/KD2021/gui.js"></script>
     <script>
 
-        kdLayer()
-            .storeIn("a")
-            .setStyle("backgroundColor", "cyan")
+        var a = kdArrayLayer()
             .wrap(
-                kdButton()
-                    .setValue("hola mundo")
-                    .setStyle("width", "200px")
-                    .addEvent("click", function () { alert("hola") })
+                kdLayer()
+                    .setStyle("backgroundColor", "cyan")
+                    .wrap(
+                        kdButton()
+                            .setName("boton")
+                            .setValue("hola mundo")
+                            .setStyle("width", "200px")
+                            .addEvent("click", function (e) { alert("hola " + e.target.id) }),
+                        kdText()
+                            .setName("texto")
+                        ,
+                        kdLabel()
+                            .setValue("valor cualquiera")
+                            .setName("etiqueta"),
+                        kdArrayLayer()
+                            .setName("imagenes")
+                            .wrap(
+                                kdLayer()
+                                    .wrap(
+                                        kdImage()
+                                            .setValuePrefix("../../elevetes/img/")
+                                            .setName('imagen')
+                                    )
+                            )
+
+                    )
             )
-            .publish()
-            .clone()
-            .publish()
-            .clone()
             .publish();
+
+
+        var data = [
+            { "boton": "Este bot'on", "texto": "pronbando texto", "etiqueta": "hello", "imagenes": [{ "imagen": "1.jpg" }, { "imagen": "2.jpg" }, { "imagen": "3.jpg" }] },
+            { "boton": "Este bot'on 2", "texto": "pronbando texto 2", "etiqueta": "hello 2" },
+            { "boton": "Este bot'on 3", "texto": "pronbando texto 3", "etiqueta": "hello 3", "imagenes": [{ "imagen": "1.jpg" }, { "imagen": "2.jpg" }, { "imagen": "3.jpg" }] },
+
+        ]
+
+        a.setValue(data);
 
 
     </script>
