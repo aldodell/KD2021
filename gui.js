@@ -53,6 +53,8 @@ class KDComponent extends KDObject {
         if (htmlType != undefined) {
             this.dom.setAttribute("type", htmlType);
         }
+
+        this.dom.mirror = this;
         this.value = undefined;
         this.name = "";
         this.eventHandlers = [];
@@ -90,6 +92,10 @@ class KDComponent extends KDObject {
         this.value = value;
         this.dom.value = this.completeValue(value);
         return this;
+    }
+
+    getValue() {
+        return this.dom.value;
     }
 
     clone() {
@@ -212,6 +218,10 @@ class KDLabel extends KDVisualComponent {
         this.dom.innerHTML = this.value;
         return this;
     }
+
+    getValue() {
+        return this.dom.innerHTML;
+    }
 }
 
 function kdLabel(properties) {
@@ -231,6 +241,10 @@ class KDImage extends KDVisualComponent {
         this.dom.src = value;
         return this;
     }
+
+    getValue() {
+        return this.dom.src;
+    }
 }
 
 function kdImage(properties) {
@@ -249,45 +263,150 @@ class KDLayer extends KDVisualContainerComponent {
      * @param {*} value 
      */
     setValue(data) {
-        for (let c of this.components) {
-            let name = c.name.trim();
-            if (data[name] != undefined) {
-                c.setValue(data[name]);
+        if (Array.isArray(data)) {
+            //copy and save components:
+            let tempComponents = [];
+            for (let c of this.components) {
+                tempComponents.push(c);
+            }
+            //Clear components
+            this.components = [];
+            this.dom.innerHTML = "";
+
+            for (let row of data) {
+                for (let c of tempComponents) {
+                    c = c.clone();
+                    let name = c.name.trim();
+                    if (name == "*") {
+                        c.setValue(row);
+                    } else {
+                        c.setValue(row[name]);
+                    }
+                    this.wrap(c);
+                    //this.dom.appendChild(c.dom);
+                }
+            }
+
+        } else {
+            for (let c of this.components) {
+                let name = c.name.trim();
+                if (data[name] != undefined) {
+                    c.setValue(data[name]);
+                }
             }
         }
+
         return this;
     }
+
+
+    getValue() {
+        //Detect if is a array or an object:
+        let isArray = true;
+        for (let c of this.components) {
+            if (c.className() != "KDLayer") {
+                isArray = false;
+                break;
+            }
+        }
+        if (isArray) {
+            let table = [];
+            for (let c of this.components) {
+                table.push(c.getValue());
+            }
+            return table;
+        } else {
+            let row = {};
+            for (let c of this.components) { //.dom.childNodes
+                //let c = d.mirror;
+                let name = c.name.trim();
+                if (name != "") {
+                    row[name] = c.getValue();
+                }
+            }
+            return row;
+        }
+    }
+
+    toString() {
+        return JSON.stringify(this.getValue());
+    }
 }
+
 
 function kdLayer(properties) {
     return new KDLayer(properties);
 }
 
+/********************* DATA AREA ********************/
 
-class KDArrayLayer extends KDVisualContainerComponent {
-    constructor(properties) {
-        super(properties, "div");
+
+
+/**
+ * Base64 utility
+ */
+class KDBase64 {
+    toBase64(str) {
+        return window.btoa(encodeURIComponent(str));
     }
 
-    setValue(data) {
-        this.dom.innerHTML = "";
-        for (let row of data) {
-            for (let c of this.components) {
-                c = c.clone();
-                let name = c.name.trim();
-                if (name == "*") {
-                    c.setValue(row);
-                } else {
-                    c.setValue(row[name]);
-                }
-                this.dom.appendChild(c.dom);
-            }
-        }
-        return this;
+    fromBase64(bin) {
+        return decodeURIComponent(window.atob(bin));
     }
-
 }
 
-function kdArrayLayer(properties) {
-    return new KDArrayLayer(properties);
+
+
+class KDServerBridge extends KDObject {
+    /**
+     * KDServerBridge constructor
+     * @param {*} url 
+     * @param {*} data raw data. 
+     * @param {*} success_callback 
+     * @param {*} error_callback 
+     * @param {*} method 
+     * @param {*} mimeType 
+     */
+    constructor(url, data, success_callback, error_callback, method, mimeType) {
+        super();
+        this.url = url;
+        this.success_callback = success_callback;
+        this.error_callback = error_callback;
+        this.method = method;
+        this.mimeType = mimeType;
+        this.data = data;
+    }
+
+
+    request() {
+        //Get method
+        if (this.method == undefined) this.method = "post";
+
+        // Define mime
+        if (this.mimeType == undefined) this.mimeType = 'text/xml';
+
+        //Define callback
+        if (this.success_callback == undefined) this.success_callback = function (msg) { }
+        if (this.error_callback == undefined) this.error_callback = function (msg) { }
+
+        //Create request
+        var http_request = new XMLHttpRequest();
+        http_request.overrideMimeType(this.mimeType);
+
+        var ref = this;
+        //Manage request
+        http_request.onreadystatechange = function () {
+            if (http_request.readyState == 4) {
+                if (http_request.status == 200) {
+                    ref.success_callback(http_request.responseText);
+                } else {
+                    ref.error_callback("ERROR loading data from " + url);
+                    console.log("ERROR loading data from " + url);
+                }
+            }
+        };
+        http_request.open(this.method, this.url, true);
+        http_request.send(this.data);
+    }
+
 }
