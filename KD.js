@@ -152,6 +152,11 @@ class KDVisualComponent extends KDComponent {
         }
         return this;
     }
+
+    setEnable(bool) {
+        this.dom.disabled = !bool;
+        return this;
+    }
 }
 
 

@@ -19,7 +19,7 @@ class KDPDO
     {
         $this->connection = $connection;
         if (isset($_REQUEST[$datasetName])) {
-            $this->data = json_decode($this->fromBase64($_REQUEST[$datasetName],true));
+            $this->data = json_decode($this->fromBase64($_REQUEST[$datasetName], true));
         }
     }
 
@@ -38,6 +38,7 @@ class KDPDO
     {
         try {
             $stmt = $this->connection->prepare($sql);
+
             if ($this->data !== null) {
                 $stmt->execute($this->data);
             } else {
@@ -60,6 +61,9 @@ class KDPDO
                 $stmt = $this->connection->prepare($sql);
                 $count = $stmt->execute();
             } else {
+                if (!is_array($this->data)) {
+                    $this->data =  array($this->data);
+                }
                 foreach ($this->data as $row) {
                     $row = (array)$row;
                     $stmt = $this->connection->prepare($sql);
