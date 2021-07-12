@@ -108,6 +108,7 @@ class KDComponent extends KDObject {
         if (this.parent != undefined) o.parent = this.parent;
         o.valuePrefix = this.valuePrefix;
         o.valueSuffix = this.valueSuffix;
+        o.dom.mirror = o;
 
         return o;
     }
@@ -139,10 +140,16 @@ class KDComponent extends KDObject {
 class KDVisualComponent extends KDComponent {
     constructor(properties, htmlClass, htmlType) {
         super(properties, htmlClass, htmlType);
+        this.setStyles(properties);
     }
 
-    setStyle(name, value) {
-        this.dom.style[name] = value;
+    setStyles(obj) {
+
+        if (obj && obj.style) {
+            for (let style in obj.style) {
+                this.dom.style[style] = obj.style[style];
+            }
+        }
         return this;
     }
 }
@@ -195,6 +202,20 @@ class KDButton extends KDVisualComponent {
 function kdButton(properties) {
     return new KDButton(properties);
 }
+
+
+
+class KDHidden extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "input", "hidden");
+    }
+}
+
+function kdHidden(properties) {
+    return new KDHidden(properties);
+}
+
+
 
 class KDText extends KDVisualComponent {
     constructor(properties) {
@@ -256,7 +277,32 @@ class KDLayer extends KDVisualContainerComponent {
     constructor(properties, htmlClass) {
         super(properties, "div");
         this.name = '*';
+        this.componentsTemplate = [];
     }
+
+
+    saveStructure() {
+        this.componentsTemplate = [];
+        for (let c of this.components) {
+            this.componentsTemplate.push(c);
+        }
+        return this;
+    }
+
+    clear() {
+        this.components = [];
+        this.dom.innerHTML = "";
+        return this;
+    }
+
+    restore() {
+        this.clear();
+        for (let c of this.componentsTemplate) {
+            this.wrap(c);
+        }
+    }
+
+
 
     /**
      * Value must be an object with named properties to syncronize with children
@@ -279,11 +325,11 @@ class KDLayer extends KDVisualContainerComponent {
                     let name = c.name.trim();
                     if (name == "*") {
                         c.setValue(row);
-                    } else {
+                    } else if (name != "") {
                         c.setValue(row[name]);
                     }
                     this.wrap(c);
-                    //this.dom.appendChild(c.dom);
+
                 }
             }
 
@@ -413,3 +459,24 @@ class KDServerBridge extends KDObject {
 
 
 /********************* STYLE AREA ********************/
+class KDStyles extends KDObject {
+    constructor(properties) {
+        super(properties);
+        this.style = {}
+    }
+
+    setStyles(styleObject) {
+        for (let key in styleObject) {
+            this.style[key] = styleObject[key];
+        }
+        return this;
+    }
+}
+
+function kdStyles(properties) {
+    let s = new KDStyles();
+    for (let p of arguments) {
+        s.setStyles(p);
+    }
+    return s;
+}
