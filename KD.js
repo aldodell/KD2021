@@ -84,7 +84,7 @@ class KDComponent extends KDObject {
 
     completeValue(value) {
         if (this.valuePrefix != undefined) value = this.valuePrefix + value;
-        if (this.valueSuffix != undefined) value = value + this.valuePrefix;
+        if (this.valueSuffix != undefined) value = value + this.valueSuffix;
         return value;
     }
 
@@ -241,7 +241,7 @@ class KDLabel extends KDVisualComponent {
     setValue(value) {
         this.value = value;
         value = this.completeValue(value);
-        this.dom.innerHTML = this.value;
+        this.dom.innerHTML = value;
         return this;
     }
 
@@ -307,13 +307,13 @@ class KDLayer extends KDVisualContainerComponent {
         }
     }
 
-
-
     /**
      * Value must be an object with named properties to syncronize with children
      * @param {*} value 
      */
     setValue(data) {
+        //If we need only propagate data from parent to it's children, without create
+        //new components
         if (Array.isArray(data)) {
             //copy and save components:
             let tempComponents = [];
@@ -334,16 +334,19 @@ class KDLayer extends KDVisualContainerComponent {
                         c.setValue(row[name]);
                     }
                     this.wrap(c);
-
                 }
             }
-
         } else {
             for (let c of this.components) {
                 let name = c.name.trim();
-                if (data[name] != undefined) {
-                    c.setValue(data[name]);
+                if (name == "*") {
+                    c.setValue(data);
+                } else if (name != "") {
+                    if (data[name] != undefined) {
+                        c.setValue(data[name]);
+                    }
                 }
+
             }
         }
 
@@ -388,6 +391,82 @@ class KDLayer extends KDVisualContainerComponent {
 function kdLayer(properties) {
     return new KDLayer(properties);
 }
+
+class KDHiperlink extends KDVisualComponent {
+
+    constructor(properties) {
+        super(properties, "a");
+    }
+
+    setValue(value) {
+        this.value = value;
+        let href = this.completeValue(value["href"]);
+        let label = value["label"];
+        this.dom.setAttribute("href", href);
+        this.dom.innerText = label;
+        return this;
+    }
+
+}
+
+function kdHiperlink(properties) {
+    return new KDHiperlink(properties);
+}
+
+
+
+/**
+ * Layer used for send files to server.
+ * Call .active method is madatory
+ * @param {} properties 
+ * @returns 
+ */
+class KDDropFileZone extends KDVisualContainerComponent {
+
+    constructor(properties) {
+        super(properties, "div");
+    }
+
+    preventDefault = function (ev) {
+        ev.preventDefault();
+    }
+
+    active = function (url, data, progress_callback, success_callback, error_callback, method, mimeType) {
+        if (progress_callback == undefined) progress_callback = function (progress, quantity) { }
+
+        this.addEvent("dragenter", this.preventDefault);
+        this.addEvent("dragover", this.preventDefault);
+        this.addEvent("dragleave", this.preventDefault);
+
+        if (success_callback == undefined) success_callback = function (m) { }
+        if (error_callback == undefined) error_callback = function (m) { }
+
+        this.addEvent("drop", function (ev) {
+            ev.preventDefault();
+            let dt = ev.dataTransfer;
+            let files = dt.files;
+            let filesAr = [...files];
+            var i = 0;
+            filesAr.forEach(
+                file => {
+                    data.append("file", file)
+                    let bridge = new KDServerBridge(url, data, function (m) { progress_callback(i, filesAr.length); success_callback(m) }, error_callback, method, mimeType);
+                    bridge.send();
+                    i++;
+                }
+            )
+        });
+        return this;
+    }
+}
+
+function kdDropFileZone(properties) {
+    return new KDDropFileZone(properties);
+}
+
+
+
+
 
 /********************* DATA AREA ********************/
 
