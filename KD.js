@@ -60,6 +60,8 @@ class KDComponent extends KDObject {
         this.eventHandlers = [];
         this.parent = undefined;
 
+        this.beforeSetValue = function (obj) { };
+
     }
 
     publish(comp) {
@@ -82,13 +84,21 @@ class KDComponent extends KDObject {
         return this;
     }
 
+
+
     completeValue(value) {
         if (this.valuePrefix != undefined) value = this.valuePrefix + value;
         if (this.valueSuffix != undefined) value = value + this.valueSuffix;
         return value;
     }
 
+    setBeforeSetValue(handler) {
+        this.beforeSetValue = handler;
+        return this;
+    }
+
     setValue(value) {
+        this.beforeSetValue(this);
         this.value = value;
         this.dom.value = this.completeValue(value);
         return this;
@@ -106,6 +116,7 @@ class KDComponent extends KDObject {
         if (this.value != undefined) o.setValue(this.value);
         if (this.name != undefined) o.setName(this.name);
         if (this.parent != undefined) o.parent = this.parent;
+        o.beforeSetValue = this.beforeSetValue;
         o.valuePrefix = this.valuePrefix;
         o.valueSuffix = this.valueSuffix;
         o.dom.mirror = o;
@@ -239,6 +250,7 @@ class KDLabel extends KDVisualComponent {
     }
 
     setValue(value) {
+        this.beforeSetValue(this);
         this.value = value;
         value = this.completeValue(value);
         this.dom.innerHTML = value;
@@ -262,6 +274,7 @@ class KDImage extends KDVisualComponent {
     }
 
     setValue(value) {
+        this.beforeSetValue(this);
         this.value = value;
         value = this.completeValue(value);
         this.dom.src = value;
@@ -312,6 +325,7 @@ class KDLayer extends KDVisualContainerComponent {
      * @param {*} value 
      */
     setValue(data) {
+        this.beforeSetValue(this);
         //If we need only propagate data from parent to it's children, without create
         //new components
         if (Array.isArray(data)) {
@@ -414,7 +428,6 @@ function kdHiperlink(properties) {
 }
 
 
-
 /**
  * Layer used for send files to server.
  * Call .active method is madatory
@@ -425,37 +438,50 @@ class KDDropFileZone extends KDVisualContainerComponent {
 
     constructor(properties) {
         super(properties, "div");
+
+        this.preventDefault = function (ev) {
+            ev.preventDefault();
+        }
+
+        this.dom.ondragenter = this.preventDefault;
+        this.dom.ondragover = this.preventDefault;
+        this.dom.ondragleave = this.preventDefault;
     }
 
-    preventDefault = function (ev) {
-        ev.preventDefault();
-    }
-
+    /**
+     * 
+     * @param {*} url 
+     * @param {*} data Must be a KDDictionary
+     * @param {*} progress_callback 
+     * @param {*} success_callback 
+     * @param {*} error_callback 
+     * @param {*} method 
+     * @param {*} mimeType 
+     * @returns 
+     */
     active = function (url, data, progress_callback, success_callback, error_callback, method, mimeType) {
         if (progress_callback == undefined) progress_callback = function (progress, quantity) { }
-
-        this.addEvent("dragenter", this.preventDefault);
-        this.addEvent("dragover", this.preventDefault);
-        this.addEvent("dragleave", this.preventDefault);
-
         if (success_callback == undefined) success_callback = function (m) { }
         if (error_callback == undefined) error_callback = function (m) { }
 
-        this.addEvent("drop", function (ev) {
+        this.dom.ondrop = function (ev) {
             ev.preventDefault();
             let dt = ev.dataTransfer;
             let files = dt.files;
             let filesAr = [...files];
             var i = 0;
+
             filesAr.forEach(
                 file => {
-                    data.append("file", file)
-                    let bridge = new KDServerBridge(url, data, function (m) { progress_callback(i, filesAr.length); success_callback(m) }, error_callback, method, mimeType);
-                    bridge.send();
+                    let data2 = new FormData();
+                    kdJoinFormData(data2, data);
+                    data2.append("file", file)
+                    let bridge = new KDServerBridge(url, data2, function (m) { progress_callback(i, filesAr.length, m); success_callback(m) }, error_callback, method, mimeType);
+                    bridge.request();
                     i++;
                 }
             )
-        });
+        };
         return this;
     }
 }
@@ -465,11 +491,55 @@ function kdDropFileZone(properties) {
 }
 
 
-
-
-
 /********************* DATA AREA ********************/
+class KDDictionary extends KDObject {
+    constructor() {
+        super();
+        this.data = [];
+    }
 
+    append(key, value) {
+        let o = {};
+        o[key] = value;
+        this.data.push(o);
+        return this;
+    }
+
+    merge(dictionary) {
+        for (let o of dictionary.data) {
+            this.data.push(o);
+        }
+        return this;
+    }
+
+    getValue(key) {
+        return this.data[key];
+    }
+
+    existsKey(key) {
+        for (let o of this.data) {
+            if (o.data[key] != undefined) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    toFormData() {
+        let fd = new FormData()
+        for (let row of this.data) {
+            for (let key in row) {
+                fd.append(key, this.data[key]);
+            }
+        }
+        return fd;
+    }
+
+    clear() {
+        this.data = [];
+        return this;
+    }
+}
 
 
 /**
@@ -485,13 +555,11 @@ class KDBase64 {
     }
 }
 
-
-
 class KDServerBridge extends KDObject {
     /**
      * KDServerBridge constructor
      * @param {*} url 
-     * @param {*} data raw data. 
+     * @param {*} data raw data. Must be a KDDictionary or a FormData
      * @param {*} success_callback 
      * @param {*} error_callback 
      * @param {*} method 
@@ -535,10 +603,24 @@ class KDServerBridge extends KDObject {
                 }
             }
         };
+
+        if (this.data instanceof KDDictionary) {
+            this.data = this.data.toFormData();
+        }
+
         http_request.open(this.method, this.url, true);
         http_request.send(this.data);
     }
 
+}
+
+
+function kdJoinFormData(target, source) {
+    for (let row of source) {
+        let key = row[0];
+        let value = row[1];
+        target.append(key, value);
+    }
 }
 
 
@@ -563,4 +645,8 @@ function kdStyles(properties) {
         s.setStyles(p);
     }
     return s;
+}
+
+function kdColor(r, g, b, a) {
+    return "rgba(" + r + "," + g + "," + b + "," + a + ")";
 }
