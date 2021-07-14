@@ -145,6 +145,11 @@ class KDComponent extends KDObject {
         return this;
     }
 
+    setOnDom(key, value) {
+        this.dom[key] = value;
+        return this;
+    }
+
 }
 
 
