@@ -5,88 +5,12 @@
 
 
 <body>
-    <script src="/KD2021/gui.js"></script>
+    <script src="KD.js"></script>
     <script>
 
-
-
-        var layer = kdLayer() //Array
-            .wrap(
-                kdLayer() //Object
-                    .wrap(
-                        kdText()
-                            .setName("a"),
-                        kdText()
-                            .setName("b"),
-                        kdButton()
-                            .setValue("X")
-                            .addEvent("click", function () { alert(layer.toString()) })
-
-                    )
-            )
-            .publish();
-
-        layer.setValue(
-            [
-                { "a": 1, "b": 2 },
-                { "a": 3, "b": 4 }
-            ]
-        )
-
-
-
-
-
-
-        var a = kdLayer() // Array
-            .wrap(
-                kdLayer() // Row
-                    .setStyle("backgroundColor", "cyan")
-                    .wrap(
-                        kdButton()
-                            .setName("boton")
-                            .setValue("hola mundo")
-                            .setStyle("width", "200px")
-                            .addEvent("click", function (e) { alert("hola " + e.target.id) }),
-                        kdText()
-                            .setName("texto")
-                        ,
-                        kdLabel()
-                            .setValue("valor cualquiera")
-                            .setName("etiqueta"),
-                        kdLayer()
-                            .setName("imagenes")
-                            .wrap(
-                                kdLayer()
-                                    .wrap(
-                                        kdImage()
-                                            .setValuePrefix("../../elevetes/img/")
-                                            .setName('imagen')
-                                    )
-                            )
-                    )
-            )
-            .publish();
-
-
-        var data = [
-            { "boton": "Este bot'on", "texto": "pronbando texto", "etiqueta": "hello", "imagenes": [{ "imagen": "1.jpg" }, { "imagen": "2.jpg" }, { "imagen": "3.jpg" }] },
-            { "boton": "Este bot'on 2", "texto": "pronbando texto 2", "etiqueta": "hello 2" },
-            { "boton": "Este bot'on 3", "texto": "pronbando texto 3", "etiqueta": "hello 3", "imagenes": [{ "imagen": "1.jpg" }, { "imagen": "2.jpg" }, { "imagen": "3.jpg" }] },
-
-        ]
-
-
-        var data2 = [
-            { "boton": "Este bot'on", "texto": "pronbando texto", "etiqueta": "hello", "imagenes": { "name": [{ "imagen": "http://127.0.0.1/elevetes/img/1.jpg" }, { "imagen": "http://127.0.0.1/elevetes/img/2.jpg" }, { "imagen": "http://127.0.0.1/elevetes/img/3.jpg" }] } },
-            { "boton": "Este bot'on 2", "texto": "pronbando texto 2", "etiqueta": "hello 2", "imagenes": { "name": [{ "imagen": "" }] } },
-            { "boton": "Este bot'on 3", "texto": "pronbando texto 3", "etiqueta": "hello 3", "imagenes": { "name": [{ "imagen": "http://127.0.0.1/elevetes/img/1.jpg" }, { "imagen": "http://127.0.0.1/elevetes/img/2.jpg" }, { "imagen": "http://127.0.0.1/elevetes/img/3.jpg" }] } }]
-
-
-        a.setValue(data);
-
-        console.log(a.toString())
-
+        var kernel = new KDKernel();
+        kernel.addApplication(KDTerminal);
+        kernel.run();
 
 
     </script>

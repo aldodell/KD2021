@@ -120,7 +120,6 @@ class KDMessage extends KDObject {
 
 /** KERNEL OF KD2021 API */
 class KDKernel extends KDObject {
-
     constructor() {
         super();
         var applicationClasses = new Array(0);
@@ -168,21 +167,22 @@ class KDApplication extends KDObject {
 
         /** Reference to kernel  */
         this.kernel = kdKernel;
-
-        /** Initializing cycle life 
-         * @param params any object to configure the application
-        */
-        this.initializing = function (params) { }
-
-        /** Must be override in order to process messages
-         * @param kdMessage object type KDMessage 
-         */
-        this.process = function (params) { }
-
     }
 
+    /** Initializing cycle life 
+     * @param params any object to configure the application
+    */
+    initializing(params) { }
+
+    /** Must be override in order to process messages
+     * @param kdMessage object type KDMessage 
+     */
+    process(params) { }
 
 }
+
+
+
 
 
 /** User class wrapper */

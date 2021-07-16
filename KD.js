@@ -62,6 +62,10 @@ class KDComponent extends KDObject {
 
         this.beforeSetValue = function (obj) { };
 
+        if (properties != undefined && properties.value != undefined) {
+            this.setValue(properties.value);
+        }
+
     }
 
     publish(comp) {
@@ -173,6 +177,11 @@ class KDVisualComponent extends KDComponent {
         this.dom.disabled = !bool;
         return this;
     }
+
+    setEditable(bool) {
+        this.dom.contentEditable = bool;
+        return this;
+    }
 }
 
 
@@ -209,6 +218,8 @@ class KDVisualContainerComponent extends KDVisualComponent {
         }
         return obj;
     }
+
+
 
 }
 
@@ -654,4 +665,416 @@ function kdStyles(properties) {
 
 function kdColor(r, g, b, a) {
     return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+}
+
+
+/********************* APPLICATIONS AREA ********************/
+
+/** Message class wrapper.
+ * @param payload Data to be communicated
+ * @param source Application wich generate message
+ * @param destination Application identifier. If null KDMessaje assumes KD_ALL by default
+  */
+class KDMessage extends KDObject {
+    constructor(payload, source, destination) {
+        super();
+        this.source = source;
+        this.destination = destination == null ? KD_ALL : destination;
+        this.payload = payload;
+    }
+}
+
+/** KERNEL OF KD2021 API */
+class KDKernel extends KDObject {
+    constructor() {
+        super();
+        this.applicationClasses = new Array(0);
+        this.applications = new Array(0);
+    }
+
+    /** Add an application */
+    addApplication = function (kdApplicationClass) {
+        this.applicationClasses.push(kdApplicationClass);
+        return this;
+    }
+
+    /** Run all applications */
+    run() {
+        var kernel = this;
+        this.applicationClasses.forEach(function (appClass) {
+            var app = new appClass(this);
+            kernel.applications.push(app);
+            app.initializing();
+        });
+        return this;
+    }
+
+    /** Send messages to local registred applications */
+    sendLocalMessage(kdMessage) {
+        var re = new RegExp(kdMessage.destination);
+        this.applications.forEach(function (app) {
+            if (re.test(app.id))
+                app.process(kdMessage);
+        });
+        return this;
+    }
+}
+
+
+
+/** Application base class */
+class KDApplication extends KDObject {
+    constructor(kdKernel) {
+
+        super();
+
+        /** Application identifier */
+        this.id = "NewApp";
+
+        /** Reference to kernel  */
+        this.kernel = kdKernel;
+
+
+    }
+
+    /** Initializing cycle life 
+     * @param params any object to configure the application
+    */
+    initializing(params) { }
+
+    /** Must be override in order to process messages
+     * @param kdMessage object type KDMessage 
+     */
+    process(params) { }
+
+
+}
+
+/** User class wrapper */
+class KDUser {
+    constructor() {
+        this.id = "0";
+        this.level = "0";
+        this.name = "guess";
+    }
+}
+
+/** Windows and dialogs area */
+
+class KDWindowManager extends KDObject {
+    constructor(properties) {
+        super(properties);
+        this.windows = [];
+    }
+
+    addWindow(kdWin) {
+        this.windows.push(kdWin);
+        return this;
+    }
+
+    normalizeZIndex() {
+        for (let w of this.windows) {
+            w.dom.style.zIndex = 0;
+        }
+        return this;
+    }
+}
+
+var kdWindowManagerInstance = new KDWindowManager();
+
+/**
+ * KDWindow class. 
+ * This properties must be wrapped with an object with fallows structure:
+ * Obj.main
+ * Obj.head
+ * Obj.body
+ * Obj.foot
+ * 
+ */
+class KDWindow extends KDVisualContainerComponent {
+    // constructor(mainProperties, headProperties, bodyProperties, footProperties) {
+    constructor(properties) {
+        super(properties, "div");
+        kdWindowManagerInstance.addWindow(this);
+
+
+        this.head = kdLayer(properties.head);
+        this.body = kdLayer(properties.body);
+        this.foot = kdLayer(properties.foot);
+        this.title = kdLabel(properties.head.title);
+        this.head.wrap(this.title);
+        this.wrap(this.head, this.body, this.foot);
+
+     
+        //Make draggable:
+        this.head.dom.onmousedown = function (ev) {
+            var pos1, pos2, pos3, pos4;
+
+            ev = ev || window.event;
+            ev.preventDefault();
+            var elmnt = ev.target.parentNode;
+
+            // get the mouse cursor position at startup:
+            pos3 = ev.clientX;
+            pos4 = ev.clientY;
+            document.onmouseup = function (o) {
+                document.onmousemove = null;
+                document.onmouseup = null;
+            };
+
+            // call a function whenever the cursor moves:
+            document.onmousemove = function (e) {
+                e = e || window.event;
+                e.preventDefault();
+
+                // calculate the new cursor position:
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+
+                // set the element's new position:
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            };
+        };
+
+        this.head.dom.onclick = function (e) {
+            kdWindowManagerInstance.normalizeZIndex();
+            e.target.parentNode.style.zIndex = 1;
+        }
+    }
+
+    wrapOnBody() {
+        for (let c of arguments) {
+            this.body.wrap(c);
+        }
+        return this;
+    }
+
+    setTitle(title) {
+        this.title.setValue(title);
+        return this;
+    }
+}
+
+function kdWindow(theme) {
+    if (theme == undefined) {
+        theme = kdWindowDefaultTheme;
+    }
+    //return new KDWindow(theme.main, theme.head, theme.body, theme.foot);
+    return new KDWindow(theme);
+
+}
+
+
+var kdWindowDefaultTheme = {
+    style: {
+        position: "absolute",
+        display: "inline-block",
+        width: "50vw",
+        height: "50vh",
+        border: "1px solid black",
+        backgroundColor: "white",
+        boxShadow: "8px 8px 8px gray",
+        left: "50%",
+        transform: "translateX(-50%)"
+    },
+    head: {
+        style: {
+            position: "absolute",
+            display: "inline-block",
+            width: "100%",
+            height: "40px",
+            border: "1px solid black",
+            backgroundColor: "blue",
+            top: "0px",
+            textAlign: "center",
+            verticalAlign: "baseline",
+        },
+        title: {
+            style: {
+                color: "white",
+                top: "calc(50% - 8px)",
+
+
+            },
+            value: "Hello!",
+        }
+    },
+    body: {
+        style: {
+            position: "absolute",
+            display: "inline-block",
+            width: "calc(100% - 16px)",
+            height: "calc(50vh - 80px)",
+            border: "1px solid black",
+            backgroundColor: "white",
+            top: "41px",
+            padding: "8px",
+            overflow: "scroll",
+        }
+    },
+    foot: {
+        style: {
+            position: "absolute",
+            display: "inline-block",
+            width: "100%",
+            height: "40px",
+            border: "1px solid black",
+            backgroundColor: "gray",
+            bottom: "0px",
+        }
+    }
+}
+
+
+var kdWindowHotTheme = {
+    style: {
+        position: "absolute",
+        display: "inline-block",
+        width: "50vw",
+        height: "50vh",
+        border: "1px solid red",
+        backgroundColor: "white",
+        boxShadow: "8px 8px 8px gray",
+        left: "50%",
+        transform: "translateX(-50%)"
+    },
+    head: {
+        style: {
+            position: "absolute",
+            display: "inline-block",
+            width: "100%",
+            height: "40px",
+            border: "1px solid black",
+            backgroundColor: "orange",
+            top: "0px",
+            textAlign: "center",
+            verticalAlign: "baseline",
+        },
+        title: {
+            style: {
+                color: "white",
+                top: "calc(50% - 8px)",
+
+            },
+            value: "Hello!",
+        }
+    },
+    body: {
+        style: {
+            position: "absolute",
+            display: "inline-block",
+            width: "calc(100% - 16px)",
+            height: "calc(50vh - 80px)",
+            border: "1px solid black",
+            backgroundColor: "PapayaWhip",
+            top: "41px",
+            padding: "8px",
+            overflow: "scroll",
+        }
+    },
+    foot: {
+        style: {
+            position: "absolute",
+            display: "inline-block",
+            width: "100%",
+            height: "40px",
+            border: "1px solid black",
+            backgroundColor: "darkorange",
+            bottom: "0px",
+        }
+    }
+}
+
+var kdWindowTerminalTheme = {
+    style: {
+        position: "absolute",
+        display: "inline-block",
+        width: "50vw",
+        height: "50vh",
+        border: "1px solid red",
+        backgroundColor: "black",
+        boxShadow: "8px 8px 8px gray",
+        left: "50%",
+        transform: "translateX(-50%)"
+    },
+    head: {
+        style: {
+            position: "absolute",
+            display: "inline-block",
+            width: "100%",
+            height: "40px",
+            border: "1px solid black",
+            backgroundColor: "MidnightBlue",
+            color: "white",
+            top: "0px",
+            textAlign: "center",
+            verticalAlign: "baseline",
+        },
+        title: {
+            style: {
+                color: "white",
+                top: "calc(50% - 8px)",
+
+            },
+            value: "Hello!",
+        }
+    },
+    body: {
+        style: {
+            position: "absolute",
+            display: "inline-block",
+            width: "calc(100% - 16px)",
+            height: "calc(50vh - 80px)",
+            border: "1px solid black",
+            backgroundColor: "black",
+            color: "lime",
+            top: "41px",
+            padding: "8px",
+            overflow: "scroll",
+        }
+    },
+    foot: {
+        style: {
+            position: "absolute",
+            display: "inline-block",
+            width: "100%",
+            height: "40px",
+            border: "1px solid black",
+            backgroundColor: "gray",
+            bottom: "0px",
+        }
+    }
+}
+
+
+/** Area of functional applications */
+
+
+class KDTerminal extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.window = undefined;
+    }
+
+    initializing() {
+        this.window = new kdWindow(kdWindowTerminalTheme);
+        this.window.body.setEditable(true);
+        this.window.publish();
+        this.window.body.dom.addEventListener("keypress", this.processKey);
+    }
+
+    processKey(e) {
+        if (e.keyCode == 13) {
+            var text;
+            if (e.target.childNodes.length == 1) {
+
+            }
+
+            text = e.target.childNodes[e.target.childNodes.length - 1].innerText;
+            alert(text);
+        }
+    }
 }
