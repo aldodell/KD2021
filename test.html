@@ -8,9 +8,19 @@
     <script src="KD.js"></script>
     <script>
 
+        /*       
+        a = { b: { c: 1 } }
+                console.log("a:" + Object.keys(a).length + " " + typeof (a));
+                console.log("b:" + Object.keys(a.b).length + " " + typeof (a.b));
+                console.log("c:" + Object.keys(a.b.c).length + " " + typeof (a.b.c));
+        
+        
+                alert(typeof { a: { b: 2 } });
+        */
         var kernel = new KDKernel();
-        kernel.addApplication(KDTerminal);
-        kernel.run();
+        kernel.initialize();
+        kernel.sendLocalMessage(kdMessage("KDTerminal"));
+        var win = kdWindow();
 
 
     </script>

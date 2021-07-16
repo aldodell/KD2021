@@ -1,6 +1,7 @@
 "use strict";
 
 var kdId = 0;
+const KD_ALL = ".*";
 
 class KDObject {
     constructor(properties) {
@@ -11,12 +12,40 @@ class KDObject {
     }
 
     apply(properties) {
-        if (properties != undefined) {
-            for (let key of Object.keys(properties)) {
-                this[key] = properties[key];
+        Object.assign(this, properties);
+        return this;
+    }
+
+    /*
+        apply(properties, obj) {
+            if (properties != undefined) {
+                if (obj == undefined) { obj = this; }
+                for (let key in properties) {
+                    let v = properties[key];
+                    if (typeof (v) === "object") {
+                        this.apply(v, obj[key]);
+                    } else {
+                        obj[key] = v;
+                    }
+                }
+            }
+    */
+
+
+
+    /*
+        apply(properties) {
+            if (properties != undefined) {
+                for (let key of Object.keys(properties)) {
+                    let prop = properties[key];
+                    this[key] = prop;
+                }
             }
         }
-    }
+        */
+
+
+
 
     storeIn(name) {
         window[name] = this;
@@ -87,8 +116,6 @@ class KDComponent extends KDObject {
         this.valueSuffix = suffix;
         return this;
     }
-
-
 
     completeValue(value) {
         if (this.valuePrefix != undefined) value = this.valuePrefix + value;
@@ -676,12 +703,16 @@ function kdColor(r, g, b, a) {
  * @param destination Application identifier. If null KDMessaje assumes KD_ALL by default
   */
 class KDMessage extends KDObject {
-    constructor(payload, source, destination) {
+    constructor(destination, payload, source) {
         super();
         this.source = source;
         this.destination = destination == null ? KD_ALL : destination;
         this.payload = payload;
     }
+}
+
+function kdMessage(destination, payload, source) {
+    return new KDMessage(destination, payload, source);
 }
 
 /** KERNEL OF KD2021 API */
@@ -690,19 +721,24 @@ class KDKernel extends KDObject {
         super();
         this.applicationClasses = new Array(0);
         this.applications = new Array(0);
+
+        this
+            .addApplication(KDTerminal)
+            .addApplication(KDAlert);
+
     }
 
     /** Add an application */
-    addApplication = function (kdApplicationClass) {
+    addApplication(kdApplicationClass) {
         this.applicationClasses.push(kdApplicationClass);
         return this;
     }
 
     /** Run all applications */
-    run() {
-        var kernel = this;
+    initialize() {
+        let kernel = this;
         this.applicationClasses.forEach(function (appClass) {
-            var app = new appClass(this);
+            var app = new appClass(kernel);
             kernel.applications.push(app);
             app.initializing();
         });
@@ -710,22 +746,30 @@ class KDKernel extends KDObject {
     }
 
     /** Send messages to local registred applications */
-    sendLocalMessage(kdMessage) {
-        var re = new RegExp(kdMessage.destination);
+    sendLocalMessage(message) {
+        var re = new RegExp(message.destination);
         this.applications.forEach(function (app) {
             if (re.test(app.id))
-                app.process(kdMessage);
+                app.processMessage(message);
         });
         return this;
     }
 }
 
 
+const KDApplicationStatus = {
+    STOPPED: "STOPPED",
+    RUNNING: "RUNNING",
+}
+
+function kdApplicationStatus() {
+    return new KDApplicationStatus();
+}
+
 
 /** Application base class */
 class KDApplication extends KDObject {
     constructor(kdKernel) {
-
         super();
 
         /** Application identifier */
@@ -734,7 +778,16 @@ class KDApplication extends KDObject {
         /** Reference to kernel  */
         this.kernel = kdKernel;
 
+        this.status = KDApplicationStatus.STOPPED;
+    }
 
+    run(params) {
+        if (this.status == KDApplicationStatus.STOPPED) {
+            this.status = KDApplicationStatus.RUNNING;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /** Initializing cycle life 
@@ -745,7 +798,7 @@ class KDApplication extends KDObject {
     /** Must be override in order to process messages
      * @param kdMessage object type KDMessage 
      */
-    process(params) { }
+    processMessage(params) { }
 
 
 }
@@ -805,7 +858,7 @@ class KDWindow extends KDVisualContainerComponent {
         this.head.wrap(this.title);
         this.wrap(this.head, this.body, this.foot);
 
-     
+
         //Make draggable:
         this.head.dom.onmousedown = function (ev) {
             var pos1, pos2, pos3, pos4;
@@ -868,213 +921,154 @@ function kdWindow(theme) {
 }
 
 
-var kdWindowDefaultTheme = {
-    style: {
-        position: "absolute",
-        display: "inline-block",
-        width: "50vw",
-        height: "50vh",
-        border: "1px solid black",
-        backgroundColor: "white",
-        boxShadow: "8px 8px 8px gray",
-        left: "50%",
-        transform: "translateX(-50%)"
-    },
-    head: {
-        style: {
-            position: "absolute",
-            display: "inline-block",
-            width: "100%",
-            height: "40px",
-            border: "1px solid black",
-            backgroundColor: "blue",
-            top: "0px",
-            textAlign: "center",
-            verticalAlign: "baseline",
-        },
-        title: {
-            style: {
-                color: "white",
-                top: "calc(50% - 8px)",
+class KDWindowDefaultTheme extends KDObject {
+    constructor(properties) {
+        super(properties);
+        this.apply(
+            {
+                style: {
+                    position: "absolute",
+                    display: "inline-block",
+                    border: "1px solid black",
+                    height: "40vh",
+                    width: "50vw",
+                    padding: "0px",
 
+                },
+                head: {
+                    style: {
+                        position: "inherit",
+                        display: "inherit",
+                        border: "inherit",
+                        height: "40px",
+                        width: "100%",
+                        left: "-1px",
+                        top: "-1px",
+                        backgroundColor: "blue",
+                        textAlign: "center",
+                        lineHeight: "40px", // para centrar titulo
+                    },
+                    title: {
+                        style: {
+                            color: "white",
 
-            },
-            value: "Hello!",
-        }
-    },
-    body: {
-        style: {
-            position: "absolute",
-            display: "inline-block",
-            width: "calc(100% - 16px)",
-            height: "calc(50vh - 80px)",
-            border: "1px solid black",
-            backgroundColor: "white",
-            top: "41px",
-            padding: "8px",
-            overflow: "scroll",
-        }
-    },
-    foot: {
-        style: {
-            position: "absolute",
-            display: "inline-block",
-            width: "100%",
-            height: "40px",
-            border: "1px solid black",
-            backgroundColor: "gray",
-            bottom: "0px",
-        }
+                        }
+                    },
+                },
+
+                body: {
+                    style: {
+                        position: "inherit",
+                        display: "inherit",
+                        border: "inherit",
+                        height: "calc(100% - 80px)",
+                        width: "calc(100% - 8px)",
+                        left: "-1px",
+                        top: "40px",
+                        backgroundColor: "white",
+                        overflow: "scroll",
+                        fontSize: "2em",
+                        padding: "4px",
+
+                    }
+                },
+
+                foot: {
+                    style: {
+                        position: "inherit",
+                        display: "inherit",
+                        border: "inherit",
+                        height: "38px",
+                        width: "100%",
+                        left: "-1px",
+                        bottom: "-1px",
+                        backgroundColor: "gray",
+                    }
+                },
+            });
+        this.apply(properties);
     }
 }
 
+var kdWindowDefaultTheme = new KDWindowDefaultTheme();
+var kdWindowOrangeTheme = new KDWindowDefaultTheme();
+kdWindowOrangeTheme.apply({ head: { style: { backgroundColor: "orange" } } });
 
-var kdWindowHotTheme = {
-    style: {
-        position: "absolute",
-        display: "inline-block",
-        width: "50vw",
-        height: "50vh",
-        border: "1px solid red",
-        backgroundColor: "white",
-        boxShadow: "8px 8px 8px gray",
-        left: "50%",
-        transform: "translateX(-50%)"
-    },
-    head: {
-        style: {
-            position: "absolute",
-            display: "inline-block",
-            width: "100%",
-            height: "40px",
-            border: "1px solid black",
-            backgroundColor: "orange",
-            top: "0px",
-            textAlign: "center",
-            verticalAlign: "baseline",
-        },
-        title: {
-            style: {
-                color: "white",
-                top: "calc(50% - 8px)",
 
-            },
-            value: "Hello!",
-        }
-    },
-    body: {
-        style: {
-            position: "absolute",
-            display: "inline-block",
-            width: "calc(100% - 16px)",
-            height: "calc(50vh - 80px)",
-            border: "1px solid black",
-            backgroundColor: "PapayaWhip",
-            top: "41px",
-            padding: "8px",
-            overflow: "scroll",
-        }
-    },
-    foot: {
-        style: {
-            position: "absolute",
-            display: "inline-block",
-            width: "100%",
-            height: "40px",
-            border: "1px solid black",
-            backgroundColor: "darkorange",
-            bottom: "0px",
-        }
-    }
-}
 
-var kdWindowTerminalTheme = {
-    style: {
-        position: "absolute",
-        display: "inline-block",
-        width: "50vw",
-        height: "50vh",
-        border: "1px solid red",
-        backgroundColor: "black",
-        boxShadow: "8px 8px 8px gray",
-        left: "50%",
-        transform: "translateX(-50%)"
-    },
-    head: {
-        style: {
-            position: "absolute",
-            display: "inline-block",
-            width: "100%",
-            height: "40px",
-            border: "1px solid black",
-            backgroundColor: "MidnightBlue",
-            color: "white",
-            top: "0px",
-            textAlign: "center",
-            verticalAlign: "baseline",
-        },
-        title: {
-            style: {
-                color: "white",
-                top: "calc(50% - 8px)",
 
-            },
-            value: "Hello!",
-        }
-    },
-    body: {
-        style: {
-            position: "absolute",
-            display: "inline-block",
-            width: "calc(100% - 16px)",
-            height: "calc(50vh - 80px)",
-            border: "1px solid black",
-            backgroundColor: "black",
-            color: "lime",
-            top: "41px",
-            padding: "8px",
-            overflow: "scroll",
-        }
-    },
-    foot: {
-        style: {
-            position: "absolute",
-            display: "inline-block",
-            width: "100%",
-            height: "40px",
-            border: "1px solid black",
-            backgroundColor: "gray",
-            bottom: "0px",
-        }
-    }
-}
 
 
 /** Area of functional applications */
+
+
+class KDAlert extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.id = "alert";
+    }
+
+    processMessage(message) {
+        if (message.destination == this.id) {
+            alert(message.payload);
+        }
+    }
+}
 
 
 class KDTerminal extends KDApplication {
     constructor(kernel) {
         super(kernel);
         this.window = undefined;
+        this.id = "KDTerminal";
     }
 
     initializing() {
-        this.window = new kdWindow(kdWindowTerminalTheme);
+        this.window = new kdWindow(kdWindowDefaultTheme);
         this.window.body.setEditable(true);
-        this.window.publish();
+        this.window.kernel = this.kernel;
         this.window.body.dom.addEventListener("keypress", this.processKey);
+        this.window.setTitle("Terminal");
+    }
+
+    run() {
+        if (super.run()) {
+            this.window.publish();
+        }
+    }
+
+    processMessage(message) {
+        if (message.destination == this.id) {
+            if (message.payload == undefined) {
+                this.run();
+            } else {
+                this.window.body.dom.innerText += "\n" + message.payload;
+            }
+        }
     }
 
     processKey(e) {
+        let text;
         if (e.keyCode == 13) {
-            var text;
-            if (e.target.childNodes.length == 1) {
+            text = e.target.innerText;
+            let lines = text.split(/\n/);
+            let q = (lines.length - 2);
+            if (q < 0) q = 0;
+            let lastLine = lines[q];
 
+            let statements = lastLine.split(";");
+            for (let statement of statements) {
+                let firstSpace = statement.indexOf(" ");
+                let destination = statement.substr(0, firstSpace).trim();
+                let payload = statement.substr(firstSpace).trim();
+                let message = new KDMessage(destination, payload, "KDTerminal");
+                this.mirror.parent.kernel.sendLocalMessage(message);
             }
 
-            text = e.target.childNodes[e.target.childNodes.length - 1].innerText;
-            alert(text);
+
         }
     }
+
+
+
 }
