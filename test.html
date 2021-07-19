@@ -20,7 +20,8 @@
         var kernel = new KDKernel();
         kernel.initialize();
         kernel.sendLocalMessage(kdMessage("KDTerminal"));
-        var win = kdWindow();
+        var win = kdWindow(kdWindowTerminalTheme);
+        win.publish().setTitle("Test!");
 
 
     </script>

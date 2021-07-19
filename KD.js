@@ -11,25 +11,32 @@ class KDObject {
         this.setId();
     }
 
+    /*
     apply(properties) {
         Object.assign(this, properties);
         return this;
     }
+    */
 
-    /*
-        apply(properties, obj) {
-            if (properties != undefined) {
-                if (obj == undefined) { obj = this; }
-                for (let key in properties) {
-                    let v = properties[key];
-                    if (typeof (v) === "object") {
-                        this.apply(v, obj[key]);
-                    } else {
+
+    apply(properties, obj) {
+        if (properties != undefined) {
+            if (obj == undefined) { obj = this; }
+            for (let key in properties) {
+                let v = properties[key];
+                if (typeof (v) === "object") {
+                    if (obj[key] == undefined) {
                         obj[key] = v;
+                    } else {
+                        this.apply(v, obj[key]);
                     }
+                } else {
+                    obj[key] = v;
                 }
             }
-    */
+        }
+    }
+
 
 
 
@@ -756,6 +763,10 @@ class KDKernel extends KDObject {
     }
 }
 
+/**
+ * Kernel's nstance 
+ */
+var kdKernel = new KDKernel();
 
 const KDApplicationStatus = {
     STOPPED: "STOPPED",
@@ -833,6 +844,7 @@ class KDWindowManager extends KDObject {
     }
 }
 
+/** Window's manager instance */
 var kdWindowManagerInstance = new KDWindowManager();
 
 /**
@@ -923,8 +935,7 @@ function kdWindow(theme) {
 
 class KDWindowDefaultTheme extends KDObject {
     constructor(properties) {
-        super(properties);
-        this.apply(
+        super(
             {
                 style: {
                     position: "absolute",
@@ -988,15 +999,63 @@ class KDWindowDefaultTheme extends KDObject {
             });
         this.apply(properties);
     }
+
+    /*
+    apply(properties, obj) {
+        if (properties != undefined) {
+            if (obj == undefined) { obj = this; }
+            for (let key in properties) {
+                let v = properties[key];
+                if (typeof (v) === "object") {
+                    this.apply(v, obj[key]);
+                } else {
+                    obj[key] = v;
+                }
+            }
+        }
+    }
+    */
 }
 
 var kdWindowDefaultTheme = new KDWindowDefaultTheme();
-var kdWindowOrangeTheme = new KDWindowDefaultTheme();
-kdWindowOrangeTheme.apply({ head: { style: { backgroundColor: "orange" } } });
+var kdWindowOrangeTheme = new KDWindowDefaultTheme(
+    {
+        head:
+        {
+            style:
+                { backgroundColor: "orange" }
+        },
+        body:
+        {
+            style:
+            {
+                backgroundColor:
+                    "LightYellow"
+            }
+        }
+    }
+);
 
-
-
-
+var kdWindowTerminalTheme = new KDWindowDefaultTheme(
+    {
+        head:
+        {
+            style:
+            {
+                backgroundColor: "navy",
+                color: "white"
+            }
+        },
+        body:
+        {
+            style:
+            {
+                backgroundColor: "black",
+                color: "lime",
+            }
+        }
+    }
+);
 
 
 /** Area of functional applications */
@@ -1024,7 +1083,7 @@ class KDTerminal extends KDApplication {
     }
 
     initializing() {
-        this.window = new kdWindow(kdWindowDefaultTheme);
+        this.window = new kdWindow(kdWindowTerminalTheme);
         this.window.body.setEditable(true);
         this.window.kernel = this.kernel;
         this.window.body.dom.addEventListener("keypress", this.processKey);
@@ -1064,11 +1123,6 @@ class KDTerminal extends KDApplication {
                 let message = new KDMessage(destination, payload, "KDTerminal");
                 this.mirror.parent.kernel.sendLocalMessage(message);
             }
-
-
         }
     }
-
-
-
 }
