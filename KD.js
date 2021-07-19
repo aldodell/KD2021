@@ -674,6 +674,31 @@ function kdJoinFormData(target, source) {
 }
 
 
+/**
+ * Class to manipulate local files
+ */
+class KDFile extends KDObject {
+    constructor() {
+        super();
+        this.read = function (file, callback) {
+            var rawFile = new XMLHttpRequest();
+            rawFile.open("GET", file, true);
+            rawFile.onreadystatechange = function () {
+                if (rawFile.readyState === 4) {
+                    if (rawFile.status === 200 || rawFile.status == 0) {
+                        var allText = rawFile.responseText;
+                        callback(allText);
+                    }
+                }
+            }
+            rawFile.send(null);
+        }
+    }
+}
+
+var kdFile = new KDFile();
+
+
 /********************* STYLE AREA ********************/
 class KDStyles extends KDObject {
     constructor(properties) {
@@ -728,27 +753,20 @@ class KDKernel extends KDObject {
         super();
         this.applicationClasses = new Array(0);
         this.applications = new Array(0);
-
-        this
-            .addApplication(KDTerminal)
-            .addApplication(KDAlert);
-
+        this.initilized = false;
     }
 
     /** Add an application */
     addApplication(kdApplicationClass) {
         this.applicationClasses.push(kdApplicationClass);
+        var app = new kdApplicationClass(this);
+        this.applications.push(app);
+        app.initializing();
         return this;
     }
 
     /** Run all applications */
     initialize() {
-        let kernel = this;
-        this.applicationClasses.forEach(function (appClass) {
-            var app = new appClass(kernel);
-            kernel.applications.push(app);
-            app.initializing();
-        });
         return this;
     }
 
@@ -763,10 +781,7 @@ class KDKernel extends KDObject {
     }
 }
 
-/**
- * Kernel's nstance 
- */
-var kdKernel = new KDKernel();
+
 
 const KDApplicationStatus = {
     STOPPED: "STOPPED",
@@ -780,14 +795,14 @@ function kdApplicationStatus() {
 
 /** Application base class */
 class KDApplication extends KDObject {
-    constructor(kdKernel) {
+    constructor(kernel) {
         super();
 
         /** Application identifier */
-        this.id = "NewApp";
+        this.id = this.constructor.name;
 
         /** Reference to kernel  */
-        this.kernel = kdKernel;
+        this.kernel = kernel;
 
         this.status = KDApplicationStatus.STOPPED;
     }
@@ -921,16 +936,14 @@ class KDWindow extends KDVisualContainerComponent {
         this.title.setValue(title);
         return this;
     }
-}
 
-function kdWindow(theme) {
-    if (theme == undefined) {
-        theme = kdWindowDefaultTheme;
+    changeSize(width, height) {
+        this.dom.style.width = width;
+        this.dom.style.height = height;
+        return this;
     }
-    //return new KDWindow(theme.main, theme.head, theme.body, theme.foot);
-    return new KDWindow(theme);
-
 }
+
 
 
 class KDWindowDefaultTheme extends KDObject {
@@ -962,7 +975,6 @@ class KDWindowDefaultTheme extends KDObject {
                     title: {
                         style: {
                             color: "white",
-
                         }
                     },
                 },
@@ -1058,9 +1070,17 @@ var kdWindowTerminalTheme = new KDWindowDefaultTheme(
 );
 
 
+function kdWindow(theme) {
+    if (theme == undefined) {
+        theme = kdWindowDefaultTheme;
+    }
+    //return new KDWindow(theme.main, theme.head, theme.body, theme.foot);
+    return new KDWindow(theme);
+}
+
+
+
 /** Area of functional applications */
-
-
 class KDAlert extends KDApplication {
     constructor(kernel) {
         super(kernel);
@@ -1116,8 +1136,10 @@ class KDTerminal extends KDApplication {
             let lastLine = lines[q];
 
             let statements = lastLine.split(";");
+
             for (let statement of statements) {
                 let firstSpace = statement.indexOf(" ");
+                if (firstSpace == -1) { firstSpace = statement.length }
                 let destination = statement.substr(0, firstSpace).trim();
                 let payload = statement.substr(firstSpace).trim();
                 let message = new KDMessage(destination, payload, "KDTerminal");
@@ -1126,3 +1148,10 @@ class KDTerminal extends KDApplication {
         }
     }
 }
+
+
+/** Main instance of KERNEL. Must be after defaults applications */
+var kdKernel = new KDKernel();
+kdKernel
+    .addApplication(KDTerminal)
+    .addApplication(KDAlert);
