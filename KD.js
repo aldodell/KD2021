@@ -96,7 +96,7 @@ class KDComponent extends KDObject {
         this.eventHandlers = [];
         this.parent = undefined;
 
-        this.beforeSetValue = function (obj) { };
+        this.doBeforeSetValue = function (obj) { };
 
         if (properties != undefined && properties.value != undefined) {
             this.setValue(properties.value);
@@ -130,13 +130,13 @@ class KDComponent extends KDObject {
         return value;
     }
 
-    setBeforeSetValue(handler) {
-        this.beforeSetValue = handler;
+    setDoBeforeSetValue(handler) {
+        this.doBeforeSetValue = handler;
         return this;
     }
 
     setValue(value) {
-        this.beforeSetValue(this);
+        this.doBeforeSetValue(this);
         this.value = value;
         this.dom.value = this.completeValue(value);
         return this;
@@ -154,7 +154,7 @@ class KDComponent extends KDObject {
         if (this.value != undefined) o.setValue(this.value);
         if (this.name != undefined) o.setName(this.name);
         if (this.parent != undefined) o.parent = this.parent;
-        o.beforeSetValue = this.beforeSetValue;
+        o.doBeforeSetValue = this.doBeforeSetValue;
         o.valuePrefix = this.valuePrefix;
         o.valueSuffix = this.valueSuffix;
         o.dom.mirror = o;
@@ -300,7 +300,7 @@ class KDLabel extends KDVisualComponent {
     }
 
     setValue(value) {
-        this.beforeSetValue(this);
+        this.doBeforeSetValue(this);
         this.value = value;
         value = this.completeValue(value);
         this.dom.innerHTML = value;
@@ -324,7 +324,7 @@ class KDImage extends KDVisualComponent {
     }
 
     setValue(value) {
-        this.beforeSetValue(this);
+        this.doBeforeSetValue(this);
         this.value = value;
         value = this.completeValue(value);
         this.dom.src = value;
@@ -375,7 +375,7 @@ class KDLayer extends KDVisualContainerComponent {
      * @param {*} value 
      */
     setValue(data) {
-        this.beforeSetValue(this);
+        this.doBeforeSetValue(this);
         //If we need only propagate data from parent to it's children, without create
         //new components
         if (Array.isArray(data)) {
@@ -754,6 +754,7 @@ class KDKernel extends KDObject {
         this.applicationClasses = new Array(0);
         this.applications = new Array(0);
         this.initilized = false;
+
     }
 
     /** Add an application */
@@ -763,6 +764,24 @@ class KDKernel extends KDObject {
         this.applications.push(app);
         app.initializing();
         return this;
+    }
+
+    /**
+     * Load a javascript file and retrieve the KDApplication
+     * IMPORTANT: File name must end in ".js", and must be
+     * equal to class name.
+     * 
+     * @param {String} className 
+     */
+    loadApplication(className, kernelInstanceName) {
+        let filename = className + ".js";
+        var me = this;
+        kdFile.read(filename, function (f) {
+            let bd = document.getElementsByTagName("body")[0];
+            let r = kernelInstanceName + ".addApplication(" + className + ")";
+            bd.innerHTML = bd.innerHTML + "<script>" + f + ";" + r + "</script>";
+
+        });
     }
 
     /** Run all applications */
@@ -990,7 +1009,7 @@ class KDWindowDefaultTheme extends KDObject {
                         top: "40px",
                         backgroundColor: "white",
                         overflow: "scroll",
-                        fontSize: "2em",
+                        fontSize: "1em",
                         padding: "4px",
 
                     }
