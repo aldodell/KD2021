@@ -216,8 +216,36 @@ class KDVisualComponent extends KDComponent {
         this.dom.contentEditable = bool;
         return this;
     }
-}
 
+
+    getCaretIndex() {
+        //https://gist.github.com/isLishude/6ccd1fbf42d1eaac667d6873e7b134f8
+
+        // for contentedit field
+        if (this.dom.contentEditable) {
+            this.dom.focus()
+            let _range = document.getSelection().getRangeAt(0)
+            let range = _range.cloneRange()
+            range.selectNodeContents(this.dom)
+            range.setEnd(_range.endContainer, _range.endOffset)
+            return range.toString().length;
+        }
+        // for texterea/input element
+        return this.target.selectionStart
+    }
+
+
+    setCaretIndex(pos) {
+        // for contentedit field
+        if (this.dom.contentEditable) {
+            this.dom.focus()
+            document.getSelection().collapse(this.dom, pos)
+            return;
+        }
+        this.target.setSelectionRange(pos, pos);
+    }
+
+}
 
 class KDVisualContainerComponent extends KDVisualComponent {
     constructor(properties, htmlClass, htmlType) {
@@ -777,10 +805,8 @@ class KDKernel extends KDObject {
         let filename = className + ".js";
         var me = this;
         kdFile.read(filename, function (f) {
-            let bd = document.getElementsByTagName("body")[0];
-            let r = kernelInstanceName + ".addApplication(" + className + ")";
-            bd.innerHTML = bd.innerHTML + "<script>" + f + ";" + r + "</script>";
-
+            let r = f + ";" + kernelInstanceName + ".addApplication(" + className + ");";
+            eval(r);
         });
     }
 
@@ -977,6 +1003,7 @@ class KDWindowDefaultTheme extends KDObject {
                     width: "50vw",
                     padding: "0px",
 
+
                 },
                 head: {
                     style: {
@@ -1011,6 +1038,7 @@ class KDWindowDefaultTheme extends KDObject {
                         overflow: "scroll",
                         fontSize: "1em",
                         padding: "4px",
+                        whiteSpace: "pre-wrap",
 
                     }
                 },
@@ -1115,10 +1143,18 @@ class KDAlert extends KDApplication {
 
 
 class KDTerminal extends KDApplication {
+
     constructor(kernel) {
         super(kernel);
         this.window = undefined;
         this.id = "KDTerminal";
+        /** Mode like terminal open a waits for commands or messages */
+        const MODE_NORMAL = 0;
+        /**
+         * When an application take priority and KDTerminal serve like user interface
+         */
+        const MODE_OWNED = 1;
+        this.mode = this.MODE_NORMAL;
     }
 
     initializing() {
@@ -1140,22 +1176,21 @@ class KDTerminal extends KDApplication {
             if (message.payload == undefined) {
                 this.run();
             } else {
-                this.window.body.dom.innerText += "\n" + message.payload;
+                let s = window.getSelection();
+                let node = document.createTextNode("\n" + message.payload);
+                s.focusNode.parentNode.insertBefore(node, s.focusNode.nextSibling);
+                s.collapse(node, node.textContent.length);
+                s.focusNode.parentNode.focus();
             }
         }
     }
-
     processKey(e) {
         let text;
         if (e.keyCode == 13) {
-            text = e.target.innerText;
-            let lines = text.split(/\n/);
-            let q = (lines.length - 2);
-            if (q < 0) q = 0;
-            let lastLine = lines[q];
-
-            let statements = lastLine.split(";");
-
+            let s = window.getSelection();
+            let line = s.focusNode.textContent;
+            console.log(line);
+            let statements = line.split(";");
             for (let statement of statements) {
                 let firstSpace = statement.indexOf(" ");
                 if (firstSpace == -1) { firstSpace = statement.length }
@@ -1164,6 +1199,7 @@ class KDTerminal extends KDApplication {
                 let message = new KDMessage(destination, payload, "KDTerminal");
                 this.mirror.parent.kernel.sendLocalMessage(message);
             }
+
         }
     }
 }
