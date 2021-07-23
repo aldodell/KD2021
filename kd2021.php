@@ -3,7 +3,6 @@
 /***
  * KD PHP framework
  * June 2021
-
  */
 class KDPDO
 {
@@ -237,5 +236,44 @@ class KDPDO2
     {
         // $this->data[] = {$key, $value};
 
+    }
+}
+
+
+class KDCrypto
+{
+    private $phrases;
+
+    public function __construct()
+    {
+        $this->phrases = [["ave", "Maria"], ["gratia", "plena"], ["Dominus", "tecum"], ["benedicta", "tu"], ["in", "mulieribus"]];
+    }
+
+    public function getParameter($name)
+    {
+
+        $r = $this->INVALID;
+        if (isset($_REQUEST[$name])) {
+            $r = $_REQUEST[$name];
+        }
+
+        return $r;
+    }
+
+    public function getAWord()
+    {
+        $i = rand(0, count($this->phrases) - 1);
+        return $this->phrases[$i][0];
+    }
+
+    public function checkPhrase($p)
+    {
+        $w = explode(" ", $p);
+        foreach ($this->phrases as $v) {
+            if ($v[0] == $w[0] && $v[1] == $w[1]) {
+                return "true";
+            }
+        }
+        return "false";
     }
 }

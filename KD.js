@@ -824,9 +824,14 @@ class KDKernel extends KDObject {
         });
         return this;
     }
+
+    constainsApplication(id) {
+        for (let app of this.applications) {
+            if (app.id == id) return true;
+        }
+        return false;
+    }
 }
-
-
 
 const KDApplicationStatus = {
     STOPPED: "STOPPED",
@@ -836,7 +841,6 @@ const KDApplicationStatus = {
 function kdApplicationStatus() {
     return new KDApplicationStatus();
 }
-
 
 /** Application base class */
 class KDApplication extends KDObject {
@@ -1136,7 +1140,11 @@ class KDAlert extends KDApplication {
 
     processMessage(message) {
         if (message.destination == this.id) {
-            alert(message.payload);
+            if (message.payload == "") {
+                this.kernel.sendLocalMessage(kdMessage("KDTerminal", "release", "KDAlert"));
+            } else {
+                alert(message.payload);
+            }
         }
     }
 }
@@ -1155,12 +1163,14 @@ class KDTerminal extends KDApplication {
          */
         const MODE_OWNED = 1;
         this.mode = this.MODE_NORMAL;
+        this.owner = "";
     }
 
     initializing() {
         this.window = new kdWindow(kdWindowTerminalTheme);
         this.window.body.setEditable(true);
         this.window.kernel = this.kernel;
+        this.window.body.dom.terminal = this;
         this.window.body.dom.addEventListener("keypress", this.processKey);
         this.window.setTitle("Terminal");
     }
@@ -1168,38 +1178,81 @@ class KDTerminal extends KDApplication {
     run() {
         if (super.run()) {
             this.window.publish();
+            this.appendText("");
         }
     }
 
+    appendText(text) {
+        let bodyNode = this.window.body.dom;
+        let last = bodyNode.lastChild;
+        bodyNode.focus();
+        let node = document.createTextNode("\n" + this.owner + ">" + text);
+        bodyNode.appendChild(node, last);
+        let s = window.getSelection();
+        bodyNode.focus();
+        s.collapse(node, node.textContent.length);
+    }
+
     processMessage(message) {
-        if (message.destination == this.id) {
+        if (message.destination == this.id || message.destination == "!") {
             if (message.payload == undefined) {
                 this.run();
             } else {
-                let s = window.getSelection();
-                let node = document.createTextNode("\n" + message.payload);
-                s.focusNode.parentNode.insertBefore(node, s.focusNode.nextSibling);
-                s.collapse(node, node.textContent.length);
-                s.focusNode.parentNode.focus();
+                let tokens = message.payload.match(/\w+|\(|\)|\|!|\?|\*|\./g);
+                switch (tokens[0]) {
+                    case "take":
+                        if (tokens.length > 1) {
+                            let owner = tokens[1];
+                            if (this.kernel.constainsApplication(owner)) {
+                                this.owner = tokens[1];
+                            }
+                        }
+                        break;
+
+                    case "release":
+                        this.owner = "";
+                        break;
+
+                    case "show":
+                        if (tokens[1] == "applications") {
+                            var r = "\n";
+                            for (let app of this.kernel.applications) {
+                                r = r + app.id + "\n";
+                            }
+                            this.appendText(r);
+                        }
+                        break;
+
+                    default:
+                        this.appendText(message.payload);
+                        break;
+                }
             }
         }
     }
     processKey(e) {
-        let text;
         if (e.keyCode == 13) {
+            e.preventDefault();
             let s = window.getSelection();
             let line = s.focusNode.textContent;
-            console.log(line);
+            line = line.substr(line.indexOf(">") + 1);
             let statements = line.split(";");
+
             for (let statement of statements) {
+                let destination, payload;
                 let firstSpace = statement.indexOf(" ");
                 if (firstSpace == -1) { firstSpace = statement.length }
-                let destination = statement.substr(0, firstSpace).trim();
-                let payload = statement.substr(firstSpace).trim();
+                if (e.target.terminal.owner == "") {
+                    destination = statement.substr(0, firstSpace).trim();
+                    payload = statement.substr(firstSpace).trim();
+                } else {
+                    destination = e.target.terminal.owner;
+                    payload = statement.trim();
+                }
                 let message = new KDMessage(destination, payload, "KDTerminal");
-                this.mirror.parent.kernel.sendLocalMessage(message);
+                e.target.terminal.kernel.sendLocalMessage(message);
             }
-
+            e.target.terminal.appendText("");
         }
     }
 }
