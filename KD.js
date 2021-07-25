@@ -779,16 +779,21 @@ function kdMessage(destination, payload, source) {
 class KDKernel extends KDObject {
     constructor() {
         super();
-        this.applicationClasses = new Array(0);
+        //  this.applicationClasses = new Array(0);
         this.applications = new Array(0);
-        this.initilized = false;
-
+        this.initialized = false;
     }
 
     /** Add an application */
     addApplication(kdApplicationClass) {
-        this.applicationClasses.push(kdApplicationClass);
-        var app = new kdApplicationClass(this);
+        var app;
+        if (typeof kdApplicationClass === "string") {
+            app = eval("new " + kdApplicationClass + "(this);");
+        } else {
+            app = new kdApplicationClass(this);
+        }
+
+        // this.applicationClasses.push(kdApplicationClass);
         this.applications.push(app);
         app.initializing();
         return this;
@@ -801,13 +806,19 @@ class KDKernel extends KDObject {
      * 
      * @param {String} className 
      */
-    loadApplication(className, kernelInstanceName) {
-        let filename = className + ".js";
-        var me = this;
-        kdFile.read(filename, function (f) {
-            let r = f + ";" + kernelInstanceName + ".addApplication(" + className + ");";
-            eval(r);
+    loadApplication(className, runAfterLoad) {
+        let file = className + ".js";
+        let s = document.createElement("script");
+        s.src = file;
+        var k = this;
+        s.addEventListener("load", function () {
+            eval("k.addApplication(className)");
+            if (runAfterLoad) k.runApplication(className);
         });
+        document.getElementsByTagName("body")[0].appendChild(s);
+
+
+        return this;
     }
 
     /** Run all applications */
@@ -830,6 +841,16 @@ class KDKernel extends KDObject {
             if (app.id == id) return true;
         }
         return false;
+    }
+
+    runApplication(id) {
+        for (let app of this.applications) {
+            if (app.id == id) {
+                app.run();
+                return this;
+            }
+        }
+        return this;
     }
 }
 
