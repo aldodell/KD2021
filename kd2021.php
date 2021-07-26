@@ -40,8 +40,6 @@ class KDPDO extends KDPHP
         }
     }
 
-
-
     public function query($sql)
     {
         try {
@@ -112,9 +110,6 @@ class KDPDO extends KDPHP
 }
 
 
-
-
-
 class KDCrypto extends KDPHP
 {
     private $phrases;
@@ -143,13 +138,84 @@ class KDCrypto extends KDPHP
     }
 }
 
-class KDServer extends KDPHP
+
+
+
+/**
+ * System files:
+ * messageIndex                 | store a file with last message index
+ * messageABCDEFGH               | each message is store on separeted files with hexadecimal numbers        
+ * 
+ */
+
+class KDMessenger extends KDPHP
 {
     private $messageSymbol = "m";
+    private $messageIndexFileName = "/messages/messageIndex";
+    private $messagePrefixFileName = "/messages/message";
+
 
     function catchMessage()
     {
         $message = $this->getParameter($this->messageSymbol);
+        $message = json_decode($message);
     }
-    
+
+    function writeMessage($message)
+    {
+        $filename = $this->messagePrefixFileName . $this->incrementLastIndex();
+        file_put_contents($filename, $message);
+    }
+
+    function readLastIndex()
+    {
+        $v = file_get_contents($this->messageIndexFileName);
+        return $v;
+    }
+
+
+    function incrementIndex($index)
+    {
+        $t = str_split($index, 2);
+        $a0 = hexdec($t[3]);
+        $a1 = hexdec($t[2]);
+        $a2 = hexdec($t[1]);
+        $a3 = hexdec($t[0]);
+
+        $a0++;
+        if ($a0 == 256) {
+            $a0 = 0;
+            $a1++;
+        }
+
+        if ($a1 == 256) {
+            $a1 = 0;
+            $a2++;
+        }
+
+        if ($a2 == 256) {
+            $a2 = 0;
+            $a3++;
+        }
+
+        $h = str_pad(dechex($a3), 2, "0", STR_PAD_LEFT);
+        $h = $h . str_pad(dechex($a2), 2, "0", STR_PAD_LEFT);
+        $h = $h . str_pad(dechex($a1), 2, "0", STR_PAD_LEFT);
+        $h = $h . str_pad(dechex($a0), 2, "0", STR_PAD_LEFT);
+
+        return $h;
+    }
+
+    function incrementLastIndex()
+    {
+        $v = $this->readLastIndex();
+        $h = $this->incrementIndex($v);
+        file_put_contents($this->messageIndexFileName, $h);
+        return $h;
+    }
+
+    function readMessagesBeginAt($index)
+    {
+        
+    }
 }

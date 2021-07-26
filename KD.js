@@ -763,16 +763,19 @@ function kdColor(r, g, b, a) {
  * @param destination Application identifier. If null KDMessaje assumes KD_ALL by default
   */
 class KDMessage extends KDObject {
-    constructor(destination, payload, source) {
+    constructor(destination, payload, source, user, index) {
         super();
         this.source = source;
         this.destination = destination == null ? KD_ALL : destination;
         this.payload = payload;
+        this.user = user;
+        this.index = index;
+        this.date = 0;
     }
 }
 
-function kdMessage(destination, payload, source) {
-    return new KDMessage(destination, payload, source);
+function kdMessage(destination, payload, source, user, index) {
+    return new KDMessage(destination, payload, source, user, index);
 }
 
 /** KERNEL OF KD2021 API */
