@@ -7,8 +7,10 @@
 <body>
     <script src="KD.js"></script>
     <script>
-
-       
+        //destination, payload, origin, producer, consumer
+        let m = kdMessage("KDTerminal", "alert hola mundo", "test", "aldodell", "aldodell2");
+        alert(m.toString());
+        kdKernel.sendRemoteMessage(m, function (msg) { alert(msg) });
 
         /*       
         a = { b: { c: 1 } }

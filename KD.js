@@ -653,7 +653,6 @@ class KDServerBridge extends KDObject {
         this.data = data;
     }
 
-
     request() {
         //Get method
         if (this.method == undefined) this.method = "post";
@@ -757,25 +756,41 @@ function kdColor(r, g, b, a) {
 
 /********************* APPLICATIONS AREA ********************/
 
-/** Message class wrapper.
- * @param payload Data to be communicated
- * @param source Application wich generate message
- * @param destination Application identifier. If null KDMessaje assumes KD_ALL by default
-  */
+
+
+/**
+ * Wrapper for messages
+ */
 class KDMessage extends KDObject {
-    constructor(destination, payload, source, user, index) {
+    /**
+     * 
+     * @param {string} destination Application wich will receive message
+     * @param {*} payload Data to be send
+     * @param {*} origin Application wich had create the message
+     * @param {*} producer User who created the message.
+     * @param {*} consumer User who will receive the message.
+     */
+    constructor(destination, payload, origin, producer, consumer) {
         super();
-        this.source = source;
+        this.origin = origin;
         this.destination = destination == null ? KD_ALL : destination;
         this.payload = payload;
-        this.user = user;
-        this.index = index;
-        this.date = 0;
+        this.producer = producer;
+        this.consumer = consumer;
+        this.date = Date()
+    }
+
+    tokens() {
+        return this.payload.match(/\w+|\(|\)|\|!|\?|\*|\./g);
+    }
+
+    toString() {
+        return JSON.stringify(this);
     }
 }
 
-function kdMessage(destination, payload, source, user, index) {
-    return new KDMessage(destination, payload, source, user, index);
+function kdMessage(destination, payload, origin, producer, consumer) {
+    return new KDMessage(destination, payload, origin, producer, consumer);
 }
 
 /** KERNEL OF KD2021 API */
@@ -785,6 +800,8 @@ class KDKernel extends KDObject {
         //  this.applicationClasses = new Array(0);
         this.applications = new Array(0);
         this.initialized = false;
+        this.serverUrl = "server.php";
+        this.messageSymbol = "m";
     }
 
     /** Add an application */
@@ -836,6 +853,14 @@ class KDKernel extends KDObject {
             if (re.test(app.id))
                 app.processMessage(message);
         });
+        return this;
+    }
+
+    sendRemoteMessage(message, success_callback, error_callback) {
+        let data = new FormData();
+        data.append(this.messageSymbol, message.toString())
+        let server = new KDServerBridge(this.serverUrl, data, success_callback, error_callback);
+        server.request();
         return this;
     }
 
@@ -905,9 +930,8 @@ class KDApplication extends KDObject {
 /** User class wrapper */
 class KDUser {
     constructor() {
-        this.id = "0";
-        this.level = "0";
         this.name = "guess";
+        this.organization = "";
     }
 }
 

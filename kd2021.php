@@ -1,7 +1,5 @@
 <?php
 
-
-
 class KDPHP
 {
     private $OK = "OK";
@@ -154,7 +152,6 @@ class KDMessenger extends KDPHP
     private $messageIndexFileName = "/messages/messageIndex";
     private $messagePrefixFileName = "/messages/message";
 
-
     function catchMessage()
     {
         $message = $this->getParameter($this->messageSymbol);
@@ -216,6 +213,62 @@ class KDMessenger extends KDPHP
 
     function readMessagesBeginAt($index)
     {
-        
+    }
+}
+
+
+
+class KDMessage extends KDPHP
+{
+    private $messageSymbol = "m";
+    private $messageIndexFileName = "/messages/messageIndex";
+    private $messagePrefixFileName = "/messages/message";
+
+    public $destination;
+    public $payload;
+    public $origin;
+    public $producer;
+    public $consumer;
+    public $date;
+
+    public function __construct($destination = "", $payload = "", $origin = "", $producer = "", $consumer = "")
+    {
+        $this->destination = $destination;
+        $this->payload = $payload;
+        $this->origin = $origin;
+        $this->producer = $producer;
+        $this->consumer = $consumer;
+        $this->date = date("YmdHisu");
+    }
+
+    public static function fromJson($json)
+    {
+        $obj = json_decode($json, true);
+        $m = new KDMessage();
+        foreach ($m as $key => $value) {
+            $m->{$key} = $obj[$key];
+        }
+        $m->date = date("YmdHisu");
+        return $m;
+    }
+
+    public static function fromRequest($messageSymbol)
+    {
+        $m = new KDMessage();
+        $m = $m->getParameter($messageSymbol);
+        $message = KDMessage::fromJson($m);
+        return $message;
+    }
+
+    public function toString()
+    {
+        $r = "";
+        foreach (get_object_vars($this) as $key => $value) {
+            $n = strpos($key, "message");
+            if ($n !== 0) {
+                $r .= "$key: $value\n";
+            }
+        }
+        return $r;
     }
 }
