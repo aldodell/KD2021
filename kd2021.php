@@ -271,4 +271,25 @@ class KDMessage extends KDPHP
         }
         return $r;
     }
+
+    function writeMessage()
+    {
+
+        $filename = $this->messagePrefixFileName . $this->date;
+        while (file_exists($filename)) {
+            $last = substr($filename, -6);
+            $last = intval($last);
+            $last++;
+            $filename = substr($filename, 0, strlen($filename) - 6);
+            $filename .= $last;
+        }
+        file_put_contents($filename, $this->toString());
+    }
+
+    function tokens()
+    {
+        $r = "/\w+|\(|\)|\|!|\?|\*|\./g";
+        preg_match_all($r, $this->payload, $matches);
+        return $matches;
+    }
 }

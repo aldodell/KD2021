@@ -14,4 +14,10 @@ const messageSymbol = "m";
 
 //Get request from user:
 $message = KDMessage::fromRequest(messageSymbol);
-echo $message->toString();
+
+//Filter messages to system:
+if ($message->destination == "system") {
+    echo $message->tokens();
+} else {
+    $message->writeMessage();
+}
