@@ -781,7 +781,7 @@ class KDMessage extends KDObject {
     }
 
     tokens() {
-        return this.payload.match(/\w+|\(|\)|\|!|\?|\*|\./g);
+        return this.payload.match(/\w+|\d+|\(|\)|\|!|\?|\*|\./g);
     }
 
     toString() {
@@ -802,6 +802,8 @@ class KDKernel extends KDObject {
         this.initialized = false;
         this.serverUrl = "server.php";
         this.messageSymbol = "m";
+        this.currentUser = new KDUser();
+        this.userInterfaceApplication = undefined;
     }
 
     /** Add an application */
@@ -929,9 +931,15 @@ class KDApplication extends KDObject {
 
 /** User class wrapper */
 class KDUser {
-    constructor() {
-        this.name = "guess";
-        this.organization = "";
+    constructor(name, organization) {
+        this.name = name == undefined ? "guess" : name;
+        this.organization = organization == undefined ? "generic" : organization;
+    }
+
+    setName(name, organization) {
+        this.name = name;
+        this.organization = organization;
+        return this;
     }
 }
 
@@ -1197,6 +1205,29 @@ class KDAlert extends KDApplication {
     }
 }
 
+class KDServerInterface extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.id = "server";
+    }
+
+    run() {
+        if (super.run()) {
+            let m;
+            m = kdMessage("KDTerminal", "KDTerminal take server");
+            kdKernel.sendLocalMessage(m);
+        }
+    }
+
+    processMessage(message) {
+        this.kernel.sendRemoteMessage(
+            message
+        );
+    }
+
+}
+
+
 
 class KDTerminal extends KDApplication {
 
@@ -1212,6 +1243,9 @@ class KDTerminal extends KDApplication {
         const MODE_OWNED = 1;
         this.mode = this.MODE_NORMAL;
         this.owner = "";
+
+        kernel.userInterfaceApplication = this;
+
     }
 
     initializing() {
@@ -1246,7 +1280,7 @@ class KDTerminal extends KDApplication {
             if (message.payload == undefined) {
                 this.run();
             } else {
-                let tokens = message.payload.match(/\w+|\(|\)|\|!|\?|\*|\./g);
+                let tokens = message.tokens();
                 switch (tokens[0]) {
                     case "take":
                         if (tokens.length > 1) {
@@ -1303,6 +1337,10 @@ class KDTerminal extends KDApplication {
             e.target.terminal.appendText("");
         }
     }
+
+
+
+
 }
 
 
@@ -1310,4 +1348,6 @@ class KDTerminal extends KDApplication {
 var kdKernel = new KDKernel();
 kdKernel
     .addApplication(KDTerminal)
-    .addApplication(KDAlert);
+    .addApplication(KDAlert)
+    .addApplication(KDServerInterface);
+

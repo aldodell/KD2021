@@ -5,30 +5,34 @@
 
 
 <body>
-    <script src="KD.js"></script>
-    <script>
-        //destination, payload, origin, producer, consumer
-        let m = kdMessage("system", "alert hola mundo", "test", "aldodell", "aldodell2");
-        alert(m.toString());
-        kdKernel.sendRemoteMessage(m, function (msg) { alert(msg) });
+  <script src="KD.js"></script>
+  <script>
+    //destination, payload, origin, producer, consumer
+    //let m = kdMessage("system", "create user aldodell kd", "test", "aldodell", "aldodell2");
 
-        /*       
-        a = { b: { c: 1 } }
-                console.log("a:" + Object.keys(a).length + " " + typeof (a));
-                console.log("b:" + Object.keys(a.b).length + " " + typeof (a.b));
-                console.log("c:" + Object.keys(a.b.c).length + " " + typeof (a.b.c));
-        
-        
-                alert(typeof { a: { b: 2 } });
-        */
+    //let m = kdMessage("KDTerminal", "alert hola mundo", "test", "aldodell@kd", "aldodell@kd");
 
-        kdKernel.sendLocalMessage(kdMessage("KDTerminal"));
+    // let m = kdMessage("system", "getMessages", "test", "aldodell@kd", "aldodell@kd");
+
+    // kdKernel.sendRemoteMessage(m, function (msg) { alert("Respuesta:\n " + msg) });
+
+    /*       
+    a = { b: { c: 1 } }
+            console.log("a:" + Object.keys(a).length + " " + typeof (a));
+            console.log("b:" + Object.keys(a.b).length + " " + typeof (a.b));
+            console.log("c:" + Object.keys(a.b.c).length + " " + typeof (a.b.c));
+    
+    
+            alert(typeof { a: { b: 2 } });
+    */
+
+    kdKernel.sendLocalMessage(kdMessage("KDTerminal"));
 
        // var win = kdWindow(kdWindowTerminalTheme);
        // win.publish().setTitle("Test!");
 
 
-    </script>
+  </script>
 </body>
 
 </html>

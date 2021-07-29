@@ -217,12 +217,58 @@ class KDMessenger extends KDPHP
 }
 
 
+class KDMessagesQueue extends KDPHP
+{
+    private $messageSymbol = "m";
+    private $messagesQueueFile = "messages/messages.json";
+
+    function __construct()
+    {
+        $this->create();
+    }
+
+    private function create()
+    {
+        if (!file_exists($this->messagesQueueFile)) {
+            file_put_contents($this->messagesQueueFile, "");
+        }
+    }
+
+    public function append(KDMessage $message)
+    {
+        file_put_contents($this->messagesQueueFile, $message->toString() . ",", FILE_APPEND | LOCK_EX);
+    }
+
+    public function getMessages()
+    {
+        $r = file_get_contents($this->messagesQueueFile);
+        $r = "[ $r ]";
+        $j = json_decode($r);
+        $messages = [];
+        foreach ($j as $m) {
+            $message = KDMessage::fromJson($m);
+            $messages[] = $message;
+        }
+        return $messages;
+    }
+
+
+    public function getMessagesOfConsumer($consumer, $from = "0")
+    {
+        $messages = $this->getMessages();
+        $r = [];
+        foreach ($messages as $m) {
+            if ($m->consumer == $consumer && $m->date > $from) {
+                $r[] = $m;
+            }
+        }
+        return $r;
+    }
+}
 
 class KDMessage extends KDPHP
 {
-    private $messageSymbol = "m";
-    private $messageIndexFileName = "/messages/messageIndex";
-    private $messagePrefixFileName = "/messages/message";
+    const messageSymbol = "m";
 
     public $destination;
     public $payload;
@@ -231,14 +277,15 @@ class KDMessage extends KDPHP
     public $consumer;
     public $date;
 
-    public function __construct($destination = "", $payload = "", $origin = "", $producer = "", $consumer = "")
+    public function __construct($destination = "", $payload = "", $origin = "", $producer = "", $consumer = "", $date = "")
     {
         $this->destination = $destination;
         $this->payload = $payload;
         $this->origin = $origin;
         $this->producer = $producer;
         $this->consumer = $consumer;
-        $this->date = date("YmdHisu");
+        if ($date == "") $date  = date("YmdHisu");
+        $this->date = $date;
     }
 
     public static function fromJson($json)
@@ -252,14 +299,27 @@ class KDMessage extends KDPHP
         return $m;
     }
 
-    public static function fromRequest($messageSymbol)
+    public static function fromRequest()
     {
         $m = new KDMessage();
-        $m = $m->getParameter($messageSymbol);
+        $m = $m->getParameter(KDMessage::messageSymbol);
         $message = KDMessage::fromJson($m);
         return $message;
     }
 
+    function tokens()
+    {
+        $r = "/\w+|\d+|\(|\)|\|!|\?|\*|\./";
+        preg_match_all($r, $this->payload, $matches);
+        return $matches[0];
+    }
+
+    public function toString()
+    {
+        return json_encode($this);
+    }
+
+    /*
     public function toString()
     {
         $r = "";
@@ -271,7 +331,9 @@ class KDMessage extends KDPHP
         }
         return $r;
     }
+    */
 
+    /*
     function writeMessage()
     {
 
@@ -285,11 +347,105 @@ class KDMessage extends KDPHP
         }
         file_put_contents($filename, $this->toString());
     }
+    */
+}
 
-    function tokens()
+
+
+
+class KDUserExitsException extends Exception
+{
+    function __construct($fullName)
     {
-        $r = "/\w+|\(|\)|\|!|\?|\*|\./g";
-        preg_match_all($r, $this->payload, $matches);
-        return $matches;
+        $this->message = "User $fullName exits. Try other";
+    }
+}
+
+class KDUserNotExitsException extends Exception
+{
+    function __construct($fullName)
+    {
+        $this->message = "User $fullName exits. Try other";
+    }
+}
+
+class KDUser extends KDPHP
+{
+
+    protected $usersPath = "users/";
+    public $name;
+    public $organization;
+    public $lastMessageIndex = 0;
+    const generic = "generic";
+
+    public function fullName()
+    {
+        return $this->name . "@" . $this->organization;
+    }
+
+    private function completePath()
+    {
+        return $this->usersPath . $this->fullName();
+    }
+
+    private function write()
+    {
+        file_put_contents($this->completePath(), json_encode($this));
+    }
+
+    public function updateLastMessage($index)
+    {
+        try {
+            $u = KDUser::read($this->name, $this->organization);
+            $this->lastMessage = $index;
+            $this->write();
+        } catch (KDUserNotExitsException $ex) {
+            return false;
+        }
+    }
+
+
+    public static function splitFullName($fullName)
+    {
+        $name = substr($fullName, 0, strpos($fullName, "@"));
+        $organization = substr($fullName, strlen($name) + 1);
+        $r[0] = $name;
+        $r[1] = $organization;
+        return $r;
+    }
+
+
+    public static function readByFullName($fullName)
+    {
+        $r = KDUser::splitFullName($fullName);
+        $u = KDUser::read($r[0], $r[1]);
+        return $u;
+    }
+
+    public static function read($name, $organization)
+    {
+        $u = new KDUser($name, $organization);
+        $filename = $u->usersPath . $u->fullName();
+        if (!file_exists($filename)) {
+            throw new KDUserNotExitsException($u->fullName());
+        } else {
+            $f = file_get_contents($filename);
+            $u = json_decode($f);
+            return $u;
+        }
+    }
+
+    function __construct($name, $organization = generic)
+    {
+        $this->name = $name;
+        $this->organization = $organization;
+    }
+
+    function create()
+    {
+        if (file_exists($this->completePath())) {
+            return false;
+        }
+        $this->write();
     }
 }
