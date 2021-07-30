@@ -780,8 +780,8 @@ class KDMessage extends KDObject {
         this.date = Date()
     }
 
-    tokens() {
-        return this.payload.match(/\w+|\d+|\(|\)|\|!|\?|\*|\./g);
+    getTokens() {
+        return this.payload.match(/[\w|@|\d]+/g);
     }
 
     toString() {
@@ -941,6 +941,18 @@ class KDUser {
         this.organization = organization;
         return this;
     }
+
+    fullName() {
+        return this.name + "@" + this.organization;
+    }
+
+
+}
+
+function kdUser(fullName) {
+    let name = fullName.substr(0, fullName.indexOf("@"));
+    let organization = fullName.substr(name.length + 1);
+    return new KDUser(name, organization);
 }
 
 /** Windows and dialogs area */
@@ -1211,20 +1223,30 @@ class KDServerInterface extends KDApplication {
         this.id = "server";
     }
 
-    run() {
-        if (super.run()) {
-            let m;
-            m = kdMessage("KDTerminal", "KDTerminal take server");
-            kdKernel.sendLocalMessage(m);
-        }
+    processMessage(message) {
+        let terminal = this.kernel.userInterfaceApplication;
+        //let tokens = message.getTokens();
+        this.kernel.sendRemoteMessage(message, function (m) { terminal.appendText(m) });
+    }
+
+}
+
+
+class KDUserApp extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.id = "user";
     }
 
     processMessage(message) {
-        this.kernel.sendRemoteMessage(
-            message
-        );
+        let tokens = message.getTokens();
+        switch (tokens[0]) {
+            case "log":
+                console.log(tokens[0]);
+                this.kernel.currentUser = kdUser(tokens[1]);
+                break;
+        }
     }
-
 }
 
 
@@ -1268,7 +1290,7 @@ class KDTerminal extends KDApplication {
         let bodyNode = this.window.body.dom;
         let last = bodyNode.lastChild;
         bodyNode.focus();
-        let node = document.createTextNode("\n" + this.owner + ">" + text);
+        let node = document.createTextNode("\n" + this.kernel.currentUser.fullName() + ":" + this.owner + ">" + text);
         bodyNode.appendChild(node, last);
         let s = window.getSelection();
         bodyNode.focus();
@@ -1280,7 +1302,7 @@ class KDTerminal extends KDApplication {
             if (message.payload == undefined) {
                 this.run();
             } else {
-                let tokens = message.tokens();
+                let tokens = message.getToken();
                 switch (tokens[0]) {
                     case "take":
                         if (tokens.length > 1) {
@@ -1331,7 +1353,13 @@ class KDTerminal extends KDApplication {
                     destination = e.target.terminal.owner;
                     payload = statement.trim();
                 }
-                let message = new KDMessage(destination, payload, "KDTerminal");
+                let message = new KDMessage(
+                    destination,
+                    payload,
+                    "KDTerminal",
+                    e.target.terminal.kernel.currentUser.fullName(),
+                    KD_ALL
+                );
                 e.target.terminal.kernel.sendLocalMessage(message);
             }
             e.target.terminal.appendText("");
@@ -1349,5 +1377,8 @@ var kdKernel = new KDKernel();
 kdKernel
     .addApplication(KDTerminal)
     .addApplication(KDAlert)
-    .addApplication(KDServerInterface);
+    .addApplication(KDServerInterface)
+    .addApplication(KDUserApp);
+
+
 

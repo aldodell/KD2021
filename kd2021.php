@@ -222,28 +222,25 @@ class KDMessagesQueue extends KDPHP
     private $messageSymbol = "m";
     private $messagesQueueFile = "messages/messages.json";
 
-    function __construct()
-    {
-        $this->create();
-    }
 
-    private function create()
-    {
-        if (!file_exists($this->messagesQueueFile)) {
-            file_put_contents($this->messagesQueueFile, "");
-        }
-    }
 
     public function append(KDMessage $message)
     {
-        file_put_contents($this->messagesQueueFile, $message->toString() . ",", FILE_APPEND | LOCK_EX);
+        $f = "";
+        if (!file_exists($this->messagesQueueFile)) {
+            $f = "[" . $message->toString() . "]";
+        } else {
+            $f = file_get_contents($this->messagesQueueFile);
+            $f = substr($f, 0, strlen($f) - 1) . "," . $message->toString() . "]";
+        }
+        file_put_contents($this->messagesQueueFile, $f,   LOCK_EX);
     }
 
     public function getMessages()
     {
         $r = file_get_contents($this->messagesQueueFile);
-        $r = "[ $r ]";
         $j = json_decode($r);
+        print_r($j);
         $messages = [];
         foreach ($j as $m) {
             $message = KDMessage::fromJson($m);
@@ -253,12 +250,12 @@ class KDMessagesQueue extends KDPHP
     }
 
 
-    public function getMessagesOfConsumer($consumer, $from = "0")
+    public function getMessagesOfProducer($producer, $from = "0")
     {
         $messages = $this->getMessages();
         $r = [];
         foreach ($messages as $m) {
-            if ($m->consumer == $consumer && $m->date > $from) {
+            if ($m->producer == $producer && $m->date > $from) {
                 $r[] = $m;
             }
         }
@@ -307,9 +304,9 @@ class KDMessage extends KDPHP
         return $message;
     }
 
-    function tokens()
+    function getTokens()
     {
-        $r = "/\w+|\d+|\(|\)|\|!|\?|\*|\./";
+        $r = "/[\w|@|\d]+/";
         preg_match_all($r, $this->payload, $matches);
         return $matches[0];
     }
@@ -357,7 +354,7 @@ class KDUserExitsException extends Exception
 {
     function __construct($fullName)
     {
-        $this->message = "User $fullName exits. Try other";
+        $this->message = "User $fullName exist. Try other";
     }
 }
 
@@ -365,10 +362,13 @@ class KDUserNotExitsException extends Exception
 {
     function __construct($fullName)
     {
-        $this->message = "User $fullName exits. Try other";
+        $this->message = "User $fullName does not exist. Try other";
     }
 }
 
+/**
+ * User class
+ */
 class KDUser extends KDPHP
 {
 
@@ -378,21 +378,31 @@ class KDUser extends KDPHP
     public $lastMessageIndex = 0;
     const generic = "generic";
 
-    public function fullName()
+    /**
+     * Return a string with name + @ + organization
+     */
+    public function getFullName()
     {
         return $this->name . "@" . $this->organization;
     }
 
-    private function completePath()
+    /** Return file path */
+    private function getCompletePath()
     {
-        return $this->usersPath . $this->fullName();
+        return $this->usersPath . $this->getFullName();
     }
 
+    /**
+     * Write user to store device
+     */
     private function write()
     {
-        file_put_contents($this->completePath(), json_encode($this));
+        file_put_contents($this->getCompletePath(), json_encode($this));
     }
 
+    /**
+     * Update last message index read by user
+     */
     public function updateLastMessage($index)
     {
         try {
@@ -404,48 +414,59 @@ class KDUser extends KDPHP
         }
     }
 
-
-    public static function splitFullName($fullName)
+    /**
+     * Split full name into name and organization
+     */
+    public static function splitFullName($fullName, &$name, &$organization)
     {
         $name = substr($fullName, 0, strpos($fullName, "@"));
         $organization = substr($fullName, strlen($name) + 1);
-        $r[0] = $name;
-        $r[1] = $organization;
-        return $r;
     }
 
-
-    public static function readByFullName($fullName)
+    /**
+     * Read user data from store
+     */
+    public static function read($fullName)
     {
-        $r = KDUser::splitFullName($fullName);
-        $u = KDUser::read($r[0], $r[1]);
-        return $u;
-    }
-
-    public static function read($name, $organization)
-    {
-        $u = new KDUser($name, $organization);
-        $filename = $u->usersPath . $u->fullName();
+        $u = new KDUser($fullName);
+        $filename = $u->usersPath . $u->getFullName();
         if (!file_exists($filename)) {
-            throw new KDUserNotExitsException($u->fullName());
+            throw new KDUserNotExitsException($u->getFullName());
         } else {
             $f = file_get_contents($filename);
-            $u = json_decode($f);
-            return $u;
+            $j = json_decode($f, true);
+            $u = new KDUser();
+            $u->name = $j["name"];
+            $u->organization = $j["organization"];
+            return  $u;
         }
     }
 
-    function __construct($name, $organization = generic)
+    /**
+     * User constructor.
+     * If name is full (with organization), second argument are no mandatory.
+     */
+    function __construct($name = "guess", $organization = generic)
     {
+        $p = strpos($name, "@");
+        if ($p) {
+            $organization = substr($name, $p + 1);
+            $name = substr(0, $p);
+        }
+
         $this->name = $name;
         $this->organization = $organization;
     }
 
+    /**
+     * Create a user file if does not exist.
+     */
     function create()
     {
-        if (file_exists($this->completePath())) {
-            return false;
+        if (file_exists($this->getCompletePath())) {
+            throw new KDUserExitsException($this->getFullName());
+        } else {
+            $this->write();
         }
-        $this->write();
     }
 }
