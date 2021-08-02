@@ -3,6 +3,15 @@
 var kdId = 0;
 const KD_ALL = ".*";
 
+/**
+ * Make a hash value form a string;
+ * @param {*} text 
+ * @returns 
+ */
+
+
+
+
 class KDObject {
     constructor(properties) {
         this.id = "";
@@ -75,7 +84,31 @@ class KDObject {
         return new this.constructor(this.properties);
     }
 
+    hash(text) {
+        let b = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241];
+
+        for (let i = 0; i < text.length; i++) {
+            let c = text.charCodeAt(i);
+            for (let j = 0; j < b.length; j++) {
+                b[j] *= c;
+                b[j] %= 251;
+            }
+        }
+
+        let d = "";
+        for (let e of b) {
+            d += e.toString(16);
+        }
+
+        let e = d.substr(0, 2);
+        e = parseInt(e, 16);
+        e = e % b.length;
+        //console.log(e);
+        return d.substr(e, 16);
+    }
 }
+
+
 
 class KDComponent extends KDObject {
     constructor(properties, htmlClass, htmlType) {
@@ -1241,7 +1274,7 @@ class KDUserApp extends KDApplication {
     processMessage(message) {
         let tokens = message.getTokens();
         switch (tokens[0]) {
-            case "log":
+            case "login":
                 console.log(tokens[0]);
                 this.kernel.currentUser = kdUser(tokens[1]);
                 break;
