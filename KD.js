@@ -820,6 +820,17 @@ class KDMessage extends KDObject {
     toString() {
         return JSON.stringify(this);
     }
+
+    fromJson(json) {
+        let o = JSON.parse(json);
+        this.origin = o.origin;
+        this.destination = o.destination;
+        this.payload = o.payload;
+        this.producer = o.producer;
+        this.consumer = o.consumer;
+        this.date = o.date;
+        return this;
+    }
 }
 
 function kdMessage(destination, payload, origin, producer, consumer) {
@@ -977,6 +988,13 @@ class KDUser {
 
     fullName() {
         return this.name + "@" + this.organization;
+    }
+
+    fromJson(json) {
+        let o = JSON.parse(json);
+        this.name = o.name;
+        this.organization = o.organization;
+        return this;
     }
 
 
@@ -1242,7 +1260,7 @@ class KDAlert extends KDApplication {
     processMessage(message) {
         if (message.destination == this.id) {
             if (message.payload == "") {
-                this.kernel.sendLocalMessage(kdMessage("KDTerminal", "release", "KDAlert"));
+                this.kernel.sendLocalMessage(kdMessage("terminal", "release", "KDAlert"));
             } else {
                 alert(message.payload);
             }
@@ -1272,16 +1290,56 @@ class KDUserApp extends KDApplication {
     }
 
     processMessage(message) {
-        let tokens = message.getTokens();
-        switch (tokens[0]) {
-            case "login":
-                console.log(tokens[0]);
-                this.kernel.currentUser = kdUser(tokens[1]);
-                break;
+        if (message.destination == this.id) {
+            let tokens = message.getTokens();
+            switch (tokens[0]) {
+                case "login":
+                    let fullname = tokens[1];
+                    let hashPassword = this.hash(tokens[2]);
+                    let m = kdMessage("server",
+                        "login " + fullname + " " + hashPassword,
+                        this.id,
+                        "",
+                        ""
+                    );
+                    let theKernel = this.kernel;
+                    this.kernel.sendRemoteMessage(m, function (answer) {
+                        let obj = JSON.parse(answer);
+
+                        if (obj.name) {
+                            let u = new KDUser();
+                            theKernel.currentUser = u.fromJson(answer);
+                        } else {
+                            let m = new KDMessage();
+                            m = m.fromJson(answer);
+                            theKernel.sendLocalMessage(m);
+
+                        }
+                    });
+                    break;
+            }
         }
     }
 }
 
+
+class KDHashApp extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.id = "hash";
+    }
+
+    processMessage(message) {
+        if (message.destination == this.id) {
+            let tokens = message.getTokens();
+            message.destination = "terminal";
+            message.payload = this.hash(message.payload);
+            this.kernel.sendLocalMessage(message);
+
+        }
+    }
+
+}
 
 
 class KDTerminal extends KDApplication {
@@ -1289,7 +1347,7 @@ class KDTerminal extends KDApplication {
     constructor(kernel) {
         super(kernel);
         this.window = undefined;
-        this.id = "KDTerminal";
+        this.id = "terminal";
         /** Mode like terminal open a waits for commands or messages */
         const MODE_NORMAL = 0;
         /**
@@ -1335,7 +1393,7 @@ class KDTerminal extends KDApplication {
             if (message.payload == undefined) {
                 this.run();
             } else {
-                let tokens = message.getToken();
+                let tokens = message.getTokens();
                 switch (tokens[0]) {
                     case "take":
                         if (tokens.length > 1) {
@@ -1389,7 +1447,7 @@ class KDTerminal extends KDApplication {
                 let message = new KDMessage(
                     destination,
                     payload,
-                    "KDTerminal",
+                    "terminal",
                     e.target.terminal.kernel.currentUser.fullName(),
                     KD_ALL
                 );
@@ -1411,7 +1469,9 @@ kdKernel
     .addApplication(KDTerminal)
     .addApplication(KDAlert)
     .addApplication(KDServerInterface)
-    .addApplication(KDUserApp);
+    .addApplication(KDUserApp)
+    .addApplication(KDHashApp);
+
 
 
 

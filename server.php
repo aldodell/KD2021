@@ -45,6 +45,7 @@ if ($message->destination == "server") {
                     $fullName = $message->producer;
                 }
                 $u = new KDUser($fullName);
+                $u->hashPassword = $message->hash($tokens[3]);
                 try {
                     $u->create();
                 } catch (KDUserExitsException $ex) {
@@ -53,10 +54,26 @@ if ($message->destination == "server") {
             }
             break;
 
+        case "login":
+            $fullName = $tokens[1];
+            $hashPassword = $tokens[2];
+            try {
+                $u = KDUser::read($fullName);
+            } catch (KDUserNotExitsException $ex) {
+                die("NO");
+            }
+            if ($u->hashPassword == $hashPassword) {
+                echo $u->toString();
+            } else {
+                $m = new KDMessage("terminal", "Password wrong!", "server", "", "");
+                echo $m->toString();
+            }
+            break;
+
+
         default:
             $qm = new KDMessagesQueue();
             $qm->append($message);
-            //echo $message->toString();
             break;
     }
 }

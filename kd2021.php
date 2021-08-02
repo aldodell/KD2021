@@ -390,6 +390,14 @@ class KDUserNotExitsException extends Exception
     }
 }
 
+class KDUserPasswordWrongException extends Exception
+{
+    function __construct($fullName)
+    {
+        $this->message = "User $fullName does not conform with password.";
+    }
+}
+
 /**
  * User class
  */
@@ -399,7 +407,8 @@ class KDUser extends KDPHP
     protected $usersPath = "users/";
     public $name;
     public $organization;
-    public $lastMessageIndex = 0;
+    public $lastMessageDate = 0;
+    public $hashPassword;
     const generic = "generic";
 
     /**
@@ -427,11 +436,11 @@ class KDUser extends KDPHP
     /**
      * Update last message index read by user
      */
-    public function updateLastMessage($index)
+    public function updateLastDate($date)
     {
         try {
             $u = KDUser::read($this->name, $this->organization);
-            $this->lastMessage = $index;
+            $this->lastMessageDate = $date;
             $this->write();
         } catch (KDUserNotExitsException $ex) {
             return false;
@@ -462,6 +471,8 @@ class KDUser extends KDPHP
             $u = new KDUser();
             $u->name = $j["name"];
             $u->organization = $j["organization"];
+            $u->hashPassword =  $j["hashPassword"];
+            $u->lastMessageDate = $j["lastMessageDate"];
             return  $u;
         }
     }
@@ -493,5 +504,10 @@ class KDUser extends KDPHP
         } else {
             $this->write();
         }
+    }
+
+    public function toString()
+    {
+        return json_encode($this);
     }
 }
