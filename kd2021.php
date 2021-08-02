@@ -274,12 +274,12 @@ class KDMessagesQueue extends KDPHP
     }
 
 
-    public function getMessagesOfProducer($producer, $from = "0")
+    public function getMessagesOfConsumer($consumer, $from = "0")
     {
         $messages = $this->getMessages();
         $r = [];
         foreach ($messages as $m) {
-            if ($m->producer == $producer && $m->date > $from) {
+            if ($m->consumer == $consumer && $m->date > $from) {
                 $r[] = $m;
             }
         }
@@ -339,42 +339,10 @@ class KDMessage extends KDPHP
     {
         return json_encode($this);
     }
-
-    /*
-    public function toString()
-    {
-        $r = "";
-        foreach (get_object_vars($this) as $key => $value) {
-            $n = strpos($key, "message");
-            if ($n !== 0) {
-                $r .= "$key: $value\n";
-            }
-        }
-        return $r;
-    }
-    */
-
-    /*
-    function writeMessage()
-    {
-
-        $filename = $this->messagePrefixFileName . $this->date;
-        while (file_exists($filename)) {
-            $last = substr($filename, -6);
-            $last = intval($last);
-            $last++;
-            $filename = substr($filename, 0, strlen($filename) - 6);
-            $filename .= $last;
-        }
-        file_put_contents($filename, $this->toString());
-    }
-    */
 }
 
 
-
-
-class KDUserExitsException extends Exception
+class KDUserExistException extends Exception
 {
     function __construct($fullName)
     {
@@ -382,7 +350,7 @@ class KDUserExitsException extends Exception
     }
 }
 
-class KDUserNotExitsException extends Exception
+class KDUserNotExistException extends Exception
 {
     function __construct($fullName)
     {
@@ -442,7 +410,7 @@ class KDUser extends KDPHP
             $u = KDUser::read($this->name, $this->organization);
             $this->lastMessageDate = $date;
             $this->write();
-        } catch (KDUserNotExitsException $ex) {
+        } catch (KDUserExistException $ex) {
             return false;
         }
     }
@@ -464,7 +432,7 @@ class KDUser extends KDPHP
         $u = new KDUser($fullName);
         $filename = $u->usersPath . $u->getFullName();
         if (!file_exists($filename)) {
-            throw new KDUserNotExitsException($u->getFullName());
+            throw new KDUserExistException($u->getFullName());
         } else {
             $f = file_get_contents($filename);
             $j = json_decode($f, true);
@@ -500,7 +468,7 @@ class KDUser extends KDPHP
     function create()
     {
         if (file_exists($this->getCompletePath())) {
-            throw new KDUserExitsException($this->getFullName());
+            throw new KDUserExistException($this->getFullName());
         } else {
             $this->write();
         }

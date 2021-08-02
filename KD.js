@@ -848,6 +848,8 @@ class KDKernel extends KDObject {
         this.messageSymbol = "m";
         this.currentUser = new KDUser();
         this.userInterfaceApplication = undefined;
+        this.timeToReadMessages = 3000; //miliseconds
+        this.timer = null;
     }
 
     /** Add an application */
@@ -887,8 +889,31 @@ class KDKernel extends KDObject {
         return this;
     }
 
+
+    readMessages(kernel) {
+
+        if (kernel.currentUser.name != "guess") {
+            let m = kdMessage(
+                "server",
+                "getMessages",
+                "KDKernel",
+                kernel.currentUser
+            );
+
+            this.sendRemoteMessage(m,
+                function (answer) {
+                    for (let msg of answer) {
+                        kernel.sendLocalMessage(msg);
+                    }
+                }
+            );
+        }
+    }
+
+
     /** Run all applications */
     initialize() {
+        this.timer = window.setInterval(this.readMessages, this.timeToReadMessages, this);
         return this;
     }
 
@@ -1470,7 +1495,8 @@ kdKernel
     .addApplication(KDAlert)
     .addApplication(KDServerInterface)
     .addApplication(KDUserApp)
-    .addApplication(KDHashApp);
+    .addApplication(KDHashApp)
+    .initialize();
 
 
 

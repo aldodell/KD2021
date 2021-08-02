@@ -33,7 +33,10 @@ if ($message->destination == "server") {
             $u = KDUser::read($message->producer);
             $index = $u->lastMessageIndex;
             $qm = new KDMessagesQueue();
-            echo json_encode($qm->getMessagesOfProducer($u->getFullName(), $index));
+            $msgs = $qm->getMessagesOfConsumer($u->getFullName(), $index);
+            if (is_array($msgs)) {
+                echo json_encode($msgs);
+            }
             break;
 
 
@@ -48,7 +51,7 @@ if ($message->destination == "server") {
                 $u->hashPassword = $message->hash($tokens[3]);
                 try {
                     $u->create();
-                } catch (KDUserExitsException $ex) {
+                } catch (KDUserExistException $ex) {
                     die($ex->getMessage());
                 }
             }
@@ -59,7 +62,7 @@ if ($message->destination == "server") {
             $hashPassword = $tokens[2];
             try {
                 $u = KDUser::read($fullName);
-            } catch (KDUserNotExitsException $ex) {
+            } catch (KDUserNotExistException $ex) {
                 die("NO");
             }
             if ($u->hashPassword == $hashPassword) {
