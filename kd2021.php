@@ -15,6 +15,30 @@ class KDPHP
 
         return $r;
     }
+
+    public function hash($text)
+    {
+        $b = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241];
+
+        for ($i = 0; $i < strlen($text); $i++) {
+            $c = ord(substr($text, $i, 1));
+            for ($j = 0; $j < count($b); $j++) {
+                $b[$j] *= $c;
+                $b[$j] %= 251;
+            }
+        }
+
+        $d = "";
+        foreach ($b as $e) {
+            //echo $e;
+            $d .= dechex($e);
+        }
+
+        $e = substr($d, 0, 2);
+        $e = hexdec($e);
+        $e = $e % count($b);
+        return substr($d, $e, 16);
+    }
 }
 
 
@@ -306,7 +330,7 @@ class KDMessage extends KDPHP
 
     function getTokens()
     {
-        $r = "/[\w|@|\d]+/";
+        $r = "/[\w\@\d\.]+/";
         preg_match_all($r, $this->payload, $matches);
         return $matches[0];
     }
@@ -449,9 +473,10 @@ class KDUser extends KDPHP
     function __construct($name = "guess", $organization = generic)
     {
         $p = strpos($name, "@");
+
         if ($p) {
             $organization = substr($name, $p + 1);
-            $name = substr(0, $p);
+            $name = substr($name, 0, $p);
         }
 
         $this->name = $name;

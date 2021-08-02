@@ -40,9 +40,16 @@ if ($message->destination == "server") {
         case "create":
             //Create a new user
             if ($tokens[1] == "user") {
-                $fullName =  $tokens[2];
+                $fullName = $tokens[2];
+                if ($fullName == null) {
+                    $fullName = $message->producer;
+                }
                 $u = new KDUser($fullName);
-                $u->create();
+                try {
+                    $u->create();
+                } catch (KDUserExitsException $ex) {
+                    die($ex->getMessage());
+                }
             }
             break;
 
