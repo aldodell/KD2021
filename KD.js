@@ -831,6 +831,13 @@ class KDMessage extends KDObject {
         this.date = o.date;
         return this;
     }
+
+    reducePayload() {
+        let n = this.payload.indexOf(" ");
+        let t = this.payload.substr(0, n).trim();
+        this.payload = this.payload.substr(n).trim();
+        return t;
+    }
 }
 
 function kdMessage(destination, payload, origin, producer, consumer) {
@@ -841,13 +848,12 @@ function kdMessage(destination, payload, origin, producer, consumer) {
 class KDKernel extends KDObject {
     constructor() {
         super();
-        //  this.applicationClasses = new Array(0);
         this.applications = new Array(0);
         this.initialized = false;
         this.serverUrl = "server.php";
         this.messageSymbol = "m";
         this.currentUser = new KDUser();
-        this.userInterfaceApplication = undefined;
+        //this.userInterfaceApplication = undefined;
         this.timeToReadMessages = 3000; //miliseconds
         this.timer = null;
     }
@@ -861,7 +867,6 @@ class KDKernel extends KDObject {
             app = new kdApplicationClass(this);
         }
 
-        // this.applicationClasses.push(kdApplicationClass);
         this.applications.push(app);
         app.initializing();
         return this;
@@ -890,30 +895,36 @@ class KDKernel extends KDObject {
     }
 
 
-    readMessages(kernel) {
-
-        if (kernel.currentUser.name != "guess") {
-            let m = kdMessage(
-                "server",
-                "getMessages",
-                "KDKernel",
-                kernel.currentUser
-            );
-
-            this.sendRemoteMessage(m,
-                function (answer) {
-                    for (let msg of answer) {
-                        kernel.sendLocalMessage(msg);
-                    }
-                }
-            );
-        }
-    }
-
-
     /** Run all applications */
     initialize() {
-        this.timer = window.setInterval(this.readMessages, this.timeToReadMessages, this);
+        this.timer = window.setInterval(
+            function (kernel) {
+                if (kernel.currentUser.name != "guess") {
+                    let fullName = kernel.currentUser.fullName();
+                    let m = kdMessage(
+                        "server",
+                        "getMessages",
+                        "KDKernel",
+                        fullName,
+                        fullName
+                    );
+                    kernel.sendRemoteMessage(m,
+                        function (answer) {
+                            if (answer != "false") {
+                                answer = JSON.parse(answer);
+                                for (let obj of answer) {
+                                    let m = new KDMessage(obj["destination"], obj["payload"], obj["origin"], obj["producer"], obj["consumer"], obj["date"]);
+                                    kernel.sendLocalMessage(m);
+                                }
+                            }
+                        }
+                    );
+                }
+            },
+            this.timeToReadMessages, //Time between calls
+            this // kernel reference
+        );
+
         return this;
     }
 
@@ -950,6 +961,10 @@ class KDKernel extends KDObject {
             }
         }
         return this;
+    }
+
+    print(text) {
+        console.log(text);
     }
 }
 
@@ -1274,6 +1289,24 @@ function kdWindow(theme) {
 }
 
 
+/** Area of functional applications */
+class KDEval extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.id = "eval";
+    }
+
+    processMessage(message) {
+        if (message.destination == this.id) {
+            if (message.payload == "") {
+                this.kernel.sendLocalMessage(kdMessage("terminal", "release", "KDEval"));
+            } else {
+                let r = " = " + eval(message.payload);
+                this.kernel.sendLocalMessage(kdMessage("terminal", r, "KDEval"));
+            }
+        }
+    }
+}
 
 /** Area of functional applications */
 class KDAlert extends KDApplication {
@@ -1293,6 +1326,7 @@ class KDAlert extends KDApplication {
     }
 }
 
+/*
 class KDServerInterface extends KDApplication {
     constructor(kernel) {
         super(kernel);
@@ -1301,10 +1335,28 @@ class KDServerInterface extends KDApplication {
 
     processMessage(message) {
         let terminal = this.kernel.userInterfaceApplication;
-        //let tokens = message.getTokens();
         this.kernel.sendRemoteMessage(message, function (m) { terminal.appendText(m) });
     }
 
+}
+*/
+
+class KDServerApp extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.id = "server";
+    }
+    processMessage(message) {
+        if (message.destination == this.id) {
+            let consumer = message.reducePayload();
+            message.consumer = consumer;
+            let theKernel = this.kernel;
+            theKernel.sendRemoteMessage(
+                message,
+                theKernel.print
+            )
+        }
+    }
 }
 
 
@@ -1330,15 +1382,15 @@ class KDUserApp extends KDApplication {
                     let theKernel = this.kernel;
                     this.kernel.sendRemoteMessage(m, function (answer) {
                         let obj = JSON.parse(answer);
-
                         if (obj.name) {
                             let u = new KDUser();
                             theKernel.currentUser = u.fromJson(answer);
+                            let m = kdMessage("terminal", "print User loaded!\nPress enter.", this.id, theKernel.currentUser, theKernel.currentUser);
+                            theKernel.sendLocalMessage(m);
                         } else {
                             let m = new KDMessage();
                             m = m.fromJson(answer);
                             theKernel.sendLocalMessage(m);
-
                         }
                     });
                     break;
@@ -1353,14 +1405,12 @@ class KDHashApp extends KDApplication {
         super(kernel);
         this.id = "hash";
     }
-
     processMessage(message) {
         if (message.destination == this.id) {
             let tokens = message.getTokens();
             message.destination = "terminal";
             message.payload = this.hash(message.payload);
             this.kernel.sendLocalMessage(message);
-
         }
     }
 
@@ -1382,8 +1432,8 @@ class KDTerminal extends KDApplication {
         this.mode = this.MODE_NORMAL;
         this.owner = "";
 
-        kernel.userInterfaceApplication = this;
-
+        let it = this;
+        kernel.print = function (t) { it.appendText(t, false) };
     }
 
     initializing() {
@@ -1402,11 +1452,17 @@ class KDTerminal extends KDApplication {
         }
     }
 
-    appendText(text) {
+    appendText(text, withPrefix) {
+        if (withPrefix == undefined) { withPrefix = true; }
         let bodyNode = this.window.body.dom;
         let last = bodyNode.lastChild;
         bodyNode.focus();
-        let node = document.createTextNode("\n" + this.kernel.currentUser.fullName() + ":" + this.owner + ">" + text);
+        let node;
+        if (withPrefix) {
+            node = document.createTextNode("\n" + this.kernel.currentUser.fullName() + ":" + this.owner + ">" + text);
+        } else {
+            node = document.createTextNode("\n" + text);
+        }
         bodyNode.appendChild(node, last);
         let s = window.getSelection();
         bodyNode.focus();
@@ -1443,8 +1499,13 @@ class KDTerminal extends KDApplication {
                         }
                         break;
 
+                    case "print":
+                        message.reducePayload();
+                        this.appendText(message.payload, false);
+                        break;
+
                     default:
-                        this.appendText(message.payload);
+                        this.appendText(message.payload, true);
                         break;
                 }
             }
@@ -1493,9 +1554,10 @@ var kdKernel = new KDKernel();
 kdKernel
     .addApplication(KDTerminal)
     .addApplication(KDAlert)
-    .addApplication(KDServerInterface)
+    .addApplication(KDServerApp)
     .addApplication(KDUserApp)
     .addApplication(KDHashApp)
+    .addApplication(KDEval)
     .initialize();
 
 

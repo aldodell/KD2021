@@ -18,6 +18,7 @@ $message = KDMessage::fromRequest(messageSymbol);
 
 //Filter messages to system:
 if ($message->destination == "server") {
+    $message->date  = date("YmdHisu");
     $tokens = $message->getTokens();
     switch ($tokens[0]) {
         case "ping":
@@ -30,13 +31,12 @@ if ($message->destination == "server") {
              * the producer of the message that made the call to getMessages
              */
         case "getMessages":
-            $u = KDUser::read($message->producer);
+
+            $u = KDUser::read($message->consumer);
             $index = $u->lastMessageIndex;
             $qm = new KDMessagesQueue();
             $msgs = $qm->getMessagesOfConsumer($u->getFullName(), $index);
-            if (is_array($msgs)) {
-                echo json_encode($msgs);
-            }
+            echo $msgs;
             break;
 
 
@@ -73,9 +73,9 @@ if ($message->destination == "server") {
             }
             break;
 
-
         default:
             $qm = new KDMessagesQueue();
+            $message->destination = $message->reducePayload();
             $qm->append($message);
             break;
     }

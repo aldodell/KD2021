@@ -246,44 +246,55 @@ class KDMessagesQueue extends KDPHP
     private $messageSymbol = "m";
     private $messagesQueueFile = "messages/messages.json";
 
-
-
     public function append(KDMessage $message)
     {
         $f = "";
+
         if (!file_exists($this->messagesQueueFile)) {
             $f = "[" . $message->toString() . "]";
         } else {
             $f = file_get_contents($this->messagesQueueFile);
             $f = substr($f, 0, strlen($f) - 1) . "," . $message->toString() . "]";
         }
-        file_put_contents($this->messagesQueueFile, $f,   LOCK_EX);
+        file_put_contents($this->messagesQueueFile, $f, LOCK_EX);
     }
 
     public function getMessages()
     {
-        $r = file_get_contents($this->messagesQueueFile);
-        $j = json_decode($r);
-        print_r($j);
+
         $messages = [];
-        foreach ($j as $m) {
-            $message = KDMessage::fromJson($m);
-            $messages[] = $message;
+        try {
+            if (file_exists($this->messagesQueueFile)) {
+                $r = file_get_contents($this->messagesQueueFile);
+                $j = json_decode($r, true);
+                foreach ($j as $m) {
+                    $messages[] = KDMessage::fromArray($m);
+                }
+            }
+        } catch (Exception $ex) {
+            die($ex);
         }
+        if (count($messages) == 0) $messages = "false";
         return $messages;
     }
 
 
     public function getMessagesOfConsumer($consumer, $from = "0")
     {
+
         $messages = $this->getMessages();
+        if ($messages == "false") return $messages;
         $r = [];
         foreach ($messages as $m) {
             if ($m->consumer == $consumer && $m->date > $from) {
                 $r[] = $m;
             }
         }
-        return $r;
+
+        $m = end($r);
+        $u =  KDUser::read($m->consumer);
+        $u->updateLastDate($m->date);
+        return json_encode($r);
     }
 }
 
@@ -309,16 +320,23 @@ class KDMessage extends KDPHP
         $this->date = $date;
     }
 
+
+
     public static function fromJson($json)
     {
         $obj = json_decode($json, true);
-        $m = new KDMessage();
-        foreach ($m as $key => $value) {
-            $m->{$key} = $obj[$key];
-        }
-        $m->date = date("YmdHisu");
+        return KDMessage::fromArray($obj);
+    }
+
+
+
+    public static function fromArray($obj)
+    {
+        $m = new KDMessage($obj["destination"], $obj["payload"], $obj["origin"], $obj["producer"], $obj["consumer"], $obj["date"]);
+        //  $m->date = date("YmdHisu");
         return $m;
     }
+
 
     public static function fromRequest()
     {
@@ -338,6 +356,15 @@ class KDMessage extends KDPHP
     public function toString()
     {
         return json_encode($this);
+    }
+
+
+    function reducePayload()
+    {
+        $tokens = $this->getTokens();
+        $r = $tokens[0];
+        $this->payload = trim(substr($this->payload, strlen($r) + 1));
+        return $r;
     }
 }
 
@@ -407,7 +434,7 @@ class KDUser extends KDPHP
     public function updateLastDate($date)
     {
         try {
-            $u = KDUser::read($this->name, $this->organization);
+            //$u = KDUser::read($this->name, $this->organization);
             $this->lastMessageDate = $date;
             $this->write();
         } catch (KDUserExistException $ex) {
