@@ -320,8 +320,6 @@ class KDMessage extends KDPHP
         $this->date = $date;
     }
 
-
-
     public static function fromJson($json)
     {
         $obj = json_decode($json, true);
@@ -344,6 +342,21 @@ class KDMessage extends KDPHP
         $m = $m->getParameter(KDMessage::messageSymbol);
         $message = KDMessage::fromJson($m);
         return $message;
+    }
+
+    public static function fromFile($filename)
+    {
+        if (file_exists($filename)) {
+            $f = file_get_contents($filename);
+            $m = KDMessage::fromJson($f);
+            return $m;
+        }
+        return false;
+    }
+
+    public function saveTo($filename)
+    {
+        file_put_contents($filename, $this->toString());
     }
 
     function getTokens()
