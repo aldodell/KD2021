@@ -708,8 +708,8 @@ class KDServerBridge extends KDObject {
                 if (http_request.status == 200) {
                     ref.success_callback(http_request.responseText);
                 } else {
-                    ref.error_callback("ERROR loading data from " + url);
-                    console.log("ERROR loading data from " + url);
+                    ref.error_callback("ERROR loading data from " + this.url);
+                    console.log("ERROR loading data from " + this.url);
                 }
             }
         };
@@ -834,9 +834,13 @@ class KDMessage extends KDObject {
 
     reducePayload() {
         let n = this.payload.indexOf(" ");
-        let t = this.payload.substr(0, n).trim();
-        this.payload = this.payload.substr(n).trim();
-        return t;
+        if (n > -1) {
+            let t = this.payload.substr(0, n).trim();
+            this.payload = this.payload.substr(n).trim();
+            return t;
+        } else {
+            return this.payload;
+        }
     }
 }
 
@@ -856,6 +860,12 @@ class KDKernel extends KDObject {
         //this.userInterfaceApplication = undefined;
         this.timeToReadMessages = 3000; //miliseconds
         this.timer = null;
+    }
+
+
+    setServerUrl(url) {
+        this.serverUrl = url;
+        return this;
     }
 
     /** Add an application */
@@ -1348,8 +1358,8 @@ class KDServerApp extends KDApplication {
     }
     processMessage(message) {
         if (message.destination == this.id) {
-            let consumer = message.reducePayload();
-            message.consumer = consumer;
+            // let consumer = message.reducePayload();
+            // message.consumer = consumer;
             let theKernel = this.kernel;
             theKernel.sendRemoteMessage(
                 message,

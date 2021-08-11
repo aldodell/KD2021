@@ -7,7 +7,6 @@ include("kd2021.php");
  * 
  */
 
-
 $kdphp = new KDPHP();
 const messageSymbol = "m";
 const generic = "generic";
@@ -15,11 +14,16 @@ const serverVersion = "KD Server 1.0 (alpha) 2021\n";
 
 //Get request from user:
 $message = KDMessage::fromRequest(messageSymbol);
+print_r($message);
+die();
+
 
 //Filter messages to system:
 if ($message->destination == "server") {
     $message->date  = date("YmdHisu");
     $tokens = $message->getTokens();
+ 
+
     switch ($tokens[0]) {
         case "ping":
             echo serverVersion;
@@ -72,6 +76,17 @@ if ($message->destination == "server") {
                 echo $m->toString();
             }
             break;
+
+
+        case "authorize": //server authorize app to user
+            if ($tokens[2] == "to") {
+                $applicationName = $tokens[1];
+                $userFullName = $tokens[3];
+                KDUser::addApplication($userFullName, $applicationName);
+                echo "ok.";
+            }
+            break;
+
 
         default:
             $qm = new KDMessagesQueue();

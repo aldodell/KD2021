@@ -361,7 +361,7 @@ class KDMessage extends KDPHP
 
     function getTokens()
     {
-        $r = "/[\w\@\d\.]+/";
+        $r = '/[\w\@\d\.]+/';
         preg_match_all($r, $this->payload, $matches);
         return $matches[0];
     }
@@ -417,6 +417,7 @@ class KDUser extends KDPHP
     public $organization;
     public $lastMessageDate = 0;
     public $hashPassword;
+    public $authorizedApplications = [];
     const generic = "generic";
 
     /**
@@ -431,6 +432,13 @@ class KDUser extends KDPHP
     private function getCompletePath()
     {
         return $this->usersPath . $this->getFullName();
+    }
+
+    public static function addApplication($userFullName, $applicationName)
+    {
+        $u = KDUser::read($userFullName);
+        $u->authorizedApplications[] = $applicationName;
+        $u->write();
     }
 
     /**
@@ -481,6 +489,7 @@ class KDUser extends KDPHP
             $u->organization = $j["organization"];
             $u->hashPassword =  $j["hashPassword"];
             $u->lastMessageDate = $j["lastMessageDate"];
+            $u->authorizedApplications = $j["authorizedApplications"];
             return  $u;
         }
     }
