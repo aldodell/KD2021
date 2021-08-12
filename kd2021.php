@@ -326,8 +326,6 @@ class KDMessage extends KDPHP
         return KDMessage::fromArray($obj);
     }
 
-
-
     public static function fromArray($obj)
     {
         $m = new KDMessage($obj["destination"], $obj["payload"], $obj["origin"], $obj["producer"], $obj["consumer"], $obj["date"]);
@@ -437,8 +435,13 @@ class KDUser extends KDPHP
     public static function addApplication($userFullName, $applicationName)
     {
         $u = KDUser::read($userFullName);
-        $u->authorizedApplications[] = $applicationName;
-        $u->write();
+        if ($u->authorizedApplications == null) {
+            $u->authorizedApplications = [];
+        }
+        if (!in_array($applicationName, $u->authorizedApplications)) {
+            $u->authorizedApplications[] = $applicationName;
+            $u->write();
+        }
     }
 
     /**

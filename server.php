@@ -14,15 +14,13 @@ const serverVersion = "KD Server 1.0 (alpha) 2021\n";
 
 //Get request from user:
 $message = KDMessage::fromRequest(messageSymbol);
-print_r($message);
-die();
+
 
 
 //Filter messages to system:
 if ($message->destination == "server") {
     $message->date  = date("YmdHisu");
     $tokens = $message->getTokens();
- 
 
     switch ($tokens[0]) {
         case "ping":
@@ -83,7 +81,7 @@ if ($message->destination == "server") {
                 $applicationName = $tokens[1];
                 $userFullName = $tokens[3];
                 KDUser::addApplication($userFullName, $applicationName);
-                echo "ok.";
+                echo "$applicationName authorized to $userFullName\n";
             }
             break;
 

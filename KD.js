@@ -377,6 +377,25 @@ function kdLabel(properties) {
     return new KDLabel(properties);
 }
 
+class KDSpan extends KDVisualContainerComponent {
+    constructor(properties) {
+        super(properties, "span");
+
+    }
+
+    setValue(value) {
+        this.doBeforeSetValue(this);
+        this.value = value;
+        value = this.completeValue(value);
+        this.dom.innerHTML = value;
+        return this;
+    }
+
+    getValue() {
+        return this.dom.innerHTML;
+    }
+
+}
 
 class KDImage extends KDVisualComponent {
     constructor(properties) {
@@ -1284,7 +1303,8 @@ var kdWindowTerminalTheme = new KDWindowDefaultTheme(
             {
                 backgroundColor: "black",
                 color: "lime",
-            }
+            },
+
         }
     }
 );
@@ -1311,8 +1331,12 @@ class KDEval extends KDApplication {
             if (message.payload == "") {
                 this.kernel.sendLocalMessage(kdMessage("terminal", "release", "KDEval"));
             } else {
-                let r = " = " + eval(message.payload);
-                this.kernel.sendLocalMessage(kdMessage("terminal", r, "KDEval"));
+                try {
+                    let r = " = " + eval(message.payload);
+                    this.kernel.sendLocalMessage(kdMessage("terminal", r, "KDEval"));
+                } catch (error) {
+                    this.kernel.sendLocalMessage(kdMessage("terminal", r, "Error:" + error));
+                }
             }
         }
     }
@@ -1427,56 +1451,75 @@ class KDHashApp extends KDApplication {
 }
 
 
+
 class KDTerminal extends KDApplication {
 
     constructor(kernel) {
         super(kernel);
         this.window = undefined;
         this.id = "terminal";
-        /** Mode like terminal open a waits for commands or messages */
-        const MODE_NORMAL = 0;
-        /**
-         * When an application take priority and KDTerminal serve like user interface
-         */
-        const MODE_OWNED = 1;
-        this.mode = this.MODE_NORMAL;
-        this.owner = "";
+        this.prefix = new KDSpan(kdStyles({ "fontFamily": "inherit", "fontSize": "inherit" }));
+        this.input = new KDText(kdStyles({ "backgroundColor": "inherit", "color": "inherit", "border": "none", "outline": "none", "fontFamily": "inherit", "fontSize": "inherit" }));
+        this.owner = undefined;
+    }
 
-        let it = this;
-        kernel.print = function (t) { it.appendText(t, false) };
+
+    focus(e) {
+        e.preventDefault();
+        e.target.terminal.input.dom.focus();
     }
 
     initializing() {
         this.window = new kdWindow(kdWindowTerminalTheme);
-        this.window.body.setEditable(true);
         this.window.kernel = this.kernel;
         this.window.body.dom.terminal = this;
-        this.window.body.dom.addEventListener("keypress", this.processKey);
         this.window.setTitle("Terminal");
+        let it = this;
+        this.kernel.print = function (t) { it.appendText(t, false) };
+        this.window.body.wrap(this.prefix);
+        this.window.body.wrap(this.input);
+        this.input.dom.terminal = this;
+        this.input.dom.addEventListener("keypress", this.processKey);
+        this.window.body.dom.addEventListener("click", this.focus);
+        this.prefix.setValue(">");
+
     }
 
     run() {
         if (super.run()) {
             this.window.publish();
-            this.appendText("");
+            this.appendText("Ready!");
         }
     }
 
-    appendText(text, withPrefix) {
-        if (withPrefix == undefined) { withPrefix = true; }
-        let bodyNode = this.window.body.dom;
-        let last = bodyNode.lastChild;
-        bodyNode.focus();
-        let node;
-        if (withPrefix) {
-            node = document.createTextNode("\n" + this.kernel.currentUser.fullName() + ":" + this.owner + ">" + text);
-        } else {
-            node = document.createTextNode("\n" + text);
+    appendText(code) {
+        if (code.length > 0) {
+            let node = document.createElement("div");
+            node.innerHTML = code;
+            this.window.body.dom.insertBefore(node, this.prefix.dom);
+            this.input.dom.focus();
         }
-        bodyNode.appendChild(node, last);
-        let s = window.getSelection();
-        bodyNode.focus();
-        s.collapse(node, node.textContent.length);
+    }
+
+    processKey(e) {
+        let ter = e.target.terminal;
+
+        switch (e.keyCode) {
+            case 13: //Enter
+                e.preventDefault();
+                let data = ter.input.getValue();
+                ter.appendText(data);
+                let tokens = Array.from(data.matchAll(/[\w\@\d\.]+/g));
+                let dest = tokens[0][0];
+                let m = kdMessage(dest, data.substr(dest.length).trim());
+                ter.kernel.sendLocalMessage(m);
+                ter.input.setValue("");
+                break;
+
+            default:
+                break;
+
+        }
     }
 
     processMessage(message) {
@@ -1486,18 +1529,20 @@ class KDTerminal extends KDApplication {
             } else {
                 let tokens = message.getTokens();
                 switch (tokens[0]) {
-                    case "take":
-                        if (tokens.length > 1) {
-                            let owner = tokens[1];
-                            if (this.kernel.constainsApplication(owner)) {
-                                this.owner = tokens[1];
-                            }
-                        }
-                        break;
-
-                    case "release":
-                        this.owner = "";
-                        break;
+                    /*
+                     case "take":
+                         if (tokens.length > 1) {
+                             let owner = tokens[1];
+                             if (this.kernel.constainsApplication(owner)) {
+                                 this.owner = tokens[1];
+                             }
+                         }
+                         break;
+ 
+                     case "release":
+                         this.owner = "";
+                         break;
+                         */
 
                     case "show":
                         if (tokens[1] == "applications") {
@@ -1514,6 +1559,10 @@ class KDTerminal extends KDApplication {
                         this.appendText(message.payload, false);
                         break;
 
+                    case "setPrefix":
+                        message.reducePayload();
+                        this.prefix.setValue(message.payload + ">");
+
                     default:
                         this.appendText(message.payload, true);
                         break;
@@ -1521,43 +1570,7 @@ class KDTerminal extends KDApplication {
             }
         }
     }
-    processKey(e) {
-        if (e.keyCode == 13) {
-            e.preventDefault();
-            let s = window.getSelection();
-            let line = s.focusNode.textContent;
-            line = line.substr(line.indexOf(">") + 1);
-            let statements = line.split(";");
-
-            for (let statement of statements) {
-                let destination, payload;
-                let firstSpace = statement.indexOf(" ");
-                if (firstSpace == -1) { firstSpace = statement.length }
-                if (e.target.terminal.owner == "") {
-                    destination = statement.substr(0, firstSpace).trim();
-                    payload = statement.substr(firstSpace).trim();
-                } else {
-                    destination = e.target.terminal.owner;
-                    payload = statement.trim();
-                }
-                let message = new KDMessage(
-                    destination,
-                    payload,
-                    "terminal",
-                    e.target.terminal.kernel.currentUser.fullName(),
-                    KD_ALL
-                );
-                e.target.terminal.kernel.sendLocalMessage(message);
-            }
-            e.target.terminal.appendText("");
-        }
-    }
-
-
-
-
 }
-
 
 /** Main instance of KERNEL. Must be after defaults applications */
 var kdKernel = new KDKernel();

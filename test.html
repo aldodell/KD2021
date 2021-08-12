@@ -8,9 +8,6 @@
   <script src="KD.js"></script>
   <script>
 
-   
-    var o = new KDObject();
-    console.log(o.hash("Pantocrator1."));
 
     //destination, payload, origin, producer, consumer
     //let m = kdMessage("system", "create user aldodell kd", "test", "aldodell", "aldodell2");
@@ -32,6 +29,13 @@
     */
 
     kdKernel.sendLocalMessage(kdMessage("terminal"));
+
+    /*
+     kdKernel.sendLocalMessage(kdMessage("terminal", "print hola mundo"));
+     kdKernel.sendLocalMessage(kdMessage("terminal", "print otra linea"));
+     kdKernel.sendLocalMessage(kdMessage("terminal", "print otra linea"));
+     kdKernel.sendLocalMessage(kdMessage("terminal", "print otra linea"));
+     */
 
        // var win = kdWindow(kdWindowTerminalTheme);
        // win.publish().setTitle("Test!");
