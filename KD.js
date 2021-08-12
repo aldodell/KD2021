@@ -876,11 +876,9 @@ class KDKernel extends KDObject {
         this.serverUrl = "server.php";
         this.messageSymbol = "m";
         this.currentUser = new KDUser();
-        //this.userInterfaceApplication = undefined;
         this.timeToReadMessages = 3000; //miliseconds
         this.timer = null;
     }
-
 
     setServerUrl(url) {
         this.serverUrl = url;
@@ -918,11 +916,8 @@ class KDKernel extends KDObject {
             if (runAfterLoad) k.runApplication(className);
         });
         document.getElementsByTagName("body")[0].appendChild(s);
-
-
         return this;
     }
-
 
     /** Run all applications */
     initialize() {
@@ -968,6 +963,7 @@ class KDKernel extends KDObject {
     }
 
     sendRemoteMessage(message, success_callback, error_callback) {
+        message.consumer = this.currentUser.fullName();
         let data = new FormData();
         data.append(this.messageSymbol, message.toString())
         let server = new KDServerBridge(this.serverUrl, data, success_callback, error_callback);
@@ -1016,8 +1012,11 @@ class KDApplication extends KDObject {
 
         /** Reference to kernel  */
         this.kernel = kernel;
-
         this.status = KDApplicationStatus.STOPPED;
+    }
+
+    requestAuthorization() {
+        return this.kernel.currentUser.checkAuthorizedApplication(this.id);
     }
 
     run(params) {
@@ -1047,6 +1046,7 @@ class KDUser {
     constructor(name, organization) {
         this.name = name == undefined ? "guess" : name;
         this.organization = organization == undefined ? "generic" : organization;
+        this.authorizedApplications = [];
     }
 
     setName(name, organization) {
@@ -1063,7 +1063,12 @@ class KDUser {
         let o = JSON.parse(json);
         this.name = o.name;
         this.organization = o.organization;
+        this.authorizedApplications = o.authorizedApplications;
         return this;
+    }
+
+    checkAuthorizedApplication(applicationId) {
+        return this.authorizedApplications.indexOf(applicationId) > -1;
     }
 
 
@@ -1419,8 +1424,10 @@ class KDUserApp extends KDApplication {
                         if (obj.name) {
                             let u = new KDUser();
                             theKernel.currentUser = u.fromJson(answer);
-                            let m = kdMessage("terminal", "print User loaded!\nPress enter.", this.id, theKernel.currentUser, theKernel.currentUser);
-                            theKernel.sendLocalMessage(m);
+                            let m0 = kdMessage("terminal", "print User loaded!", this.id, theKernel.currentUser, theKernel.currentUser);
+                            let m1 = kdMessage("terminal", "setPrefix " + u.fullName(), this.id, theKernel.currentUser, theKernel.currentUser);
+                            theKernel.sendLocalMessage(m0);
+                            theKernel.sendLocalMessage(m1);
                         } else {
                             let m = new KDMessage();
                             m = m.fromJson(answer);
@@ -1450,10 +1457,7 @@ class KDHashApp extends KDApplication {
 
 }
 
-
-
 class KDTerminal extends KDApplication {
-
     constructor(kernel) {
         super(kernel);
         this.window = undefined;
@@ -1462,7 +1466,6 @@ class KDTerminal extends KDApplication {
         this.input = new KDText(kdStyles({ "backgroundColor": "inherit", "color": "inherit", "border": "none", "outline": "none", "fontFamily": "inherit", "fontSize": "inherit" }));
         this.owner = undefined;
     }
-
 
     focus(e) {
         e.preventDefault();
@@ -1481,8 +1484,7 @@ class KDTerminal extends KDApplication {
         this.input.dom.terminal = this;
         this.input.dom.addEventListener("keypress", this.processKey);
         this.window.body.dom.addEventListener("click", this.focus);
-        this.prefix.setValue(">");
-
+        this.prefix.setValue(this.kernel.currentUser.fullName() + ">");
     }
 
     run() {

@@ -308,6 +308,7 @@ class KDMessage extends KDPHP
     public $producer;
     public $consumer;
     public $date;
+    
 
     public function __construct($destination = "", $payload = "", $origin = "", $producer = "", $consumer = "", $date = "")
     {
@@ -504,12 +505,10 @@ class KDUser extends KDPHP
     function __construct($name = "guess", $organization = generic)
     {
         $p = strpos($name, "@");
-
         if ($p) {
             $organization = substr($name, $p + 1);
             $name = substr($name, 0, $p);
         }
-
         $this->name = $name;
         $this->organization = $organization;
     }

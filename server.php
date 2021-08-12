@@ -15,8 +15,6 @@ const serverVersion = "KD Server 1.0 (alpha) 2021\n";
 //Get request from user:
 $message = KDMessage::fromRequest(messageSymbol);
 
-
-
 //Filter messages to system:
 if ($message->destination == "server") {
     $message->date  = date("YmdHisu");
@@ -60,6 +58,7 @@ if ($message->destination == "server") {
             break;
 
         case "login":
+
             $fullName = $tokens[1];
             $hashPassword = $tokens[2];
             try {
@@ -70,7 +69,7 @@ if ($message->destination == "server") {
             if ($u->hashPassword == $hashPassword) {
                 echo $u->toString();
             } else {
-                $m = new KDMessage("terminal", "Password wrong!", "server", "", "");
+                $m = new KDMessage("terminal", "print Password wrong!", "server", "", "");
                 echo $m->toString();
             }
             break;
