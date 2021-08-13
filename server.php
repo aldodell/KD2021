@@ -24,19 +24,23 @@ if ($message->destination == "server") {
         case "ping":
             echo serverVersion;
             break;
-
             /**
              * 
              * retrieve messages via
              * the producer of the message that made the call to getMessages
              */
         case "getMessages":
-
             $u = KDUser::read($message->consumer);
-            $index = $u->lastMessageIndex;
+            //$index = $u->lastMessageIndex;
             $qm = new KDMessagesQueue();
-            $msgs = $qm->getMessagesOfConsumer($u->getFullName(), $index);
+            $msgs = $qm->getMessagesOfConsumer($u->getFullName(), $tokens[1]);
             echo $msgs;
+            break;
+
+        case "deleteMessage":
+            $m = new KDMessage("", "", "", "", $tokens[1], $tokens[2]);
+            $qm = new KDMessagesQueue();
+            $msgs = $qm->deleteMessage($m);
             break;
 
 
@@ -86,9 +90,9 @@ if ($message->destination == "server") {
 
 
         default:
-            $qm = new KDMessagesQueue();
-            $message->destination = $message->reducePayload();
-            $qm->append($message);
             break;
     }
+} else {
+    $qm = new KDMessagesQueue();
+    $qm->append($message);
 }

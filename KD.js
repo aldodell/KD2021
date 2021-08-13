@@ -2,6 +2,7 @@
 
 var kdId = 0;
 const KD_ALL = ".*";
+const KD_TOKENS = /[\w\@\d\.\*]+/g;
 
 /**
  * Make a hash value form a string;
@@ -105,6 +106,24 @@ class KDObject {
         e = e % b.length;
         //console.log(e);
         return d.substr(e, 16);
+    }
+
+    serialTime(date) {
+
+        function pad(n) {
+            n = n.toString();
+            if (n.length == 1) n = "0" + n;
+            return n;
+        }
+
+        let Y = date.getUTCFullYear().toString();
+        let m = pad(date.getUTCMonth() + 1);
+        let d = pad(date.getUTCDate());
+        let h = pad(date.getUTCHours());
+        let i = pad(date.getUTCMinutes());
+        let s = pad(date.getUTCSeconds());
+        let r = Y + m + d + h + i + s + "000000";
+        return r;
     }
 }
 
@@ -829,11 +848,12 @@ class KDMessage extends KDObject {
         this.payload = payload;
         this.producer = producer;
         this.consumer = consumer;
-        this.date = Date()
+        let date = new Date();
+        this.date = this.serialTime(new Date());
     }
 
     getTokens() {
-        return this.payload.match(/[\w|@|\d]+/g);
+        return this.payload.match(KD_TOKENS);
     }
 
     toString() {
@@ -876,8 +896,9 @@ class KDKernel extends KDObject {
         this.serverUrl = "server.php";
         this.messageSymbol = "m";
         this.currentUser = new KDUser();
-        this.timeToReadMessages = 3000; //miliseconds
+        this.timeToReadMessages = 5000; //miliseconds
         this.timer = null;
+        this.lastMessageIndex = "0";
     }
 
     setServerUrl(url) {
@@ -927,7 +948,7 @@ class KDKernel extends KDObject {
                     let fullName = kernel.currentUser.fullName();
                     let m = kdMessage(
                         "server",
-                        "getMessages",
+                        "getMessages " + kernel.lastMessageIndex,
                         "KDKernel",
                         fullName,
                         fullName
@@ -938,6 +959,7 @@ class KDKernel extends KDObject {
                                 answer = JSON.parse(answer);
                                 for (let obj of answer) {
                                     let m = new KDMessage(obj["destination"], obj["payload"], obj["origin"], obj["producer"], obj["consumer"], obj["date"]);
+                                    kernel.lastMessageIndex = m.date;
                                     kernel.sendLocalMessage(m);
                                 }
                             }
@@ -963,7 +985,7 @@ class KDKernel extends KDObject {
     }
 
     sendRemoteMessage(message, success_callback, error_callback) {
-        message.consumer = this.currentUser.fullName();
+        //message.consumer = this.currentUser.fullName();
         let data = new FormData();
         data.append(this.messageSymbol, message.toString())
         let server = new KDServerBridge(this.serverUrl, data, success_callback, error_callback);
@@ -1325,7 +1347,7 @@ function kdWindow(theme) {
 
 
 /** Area of functional applications */
-class KDEval extends KDApplication {
+class KDEvalApp extends KDApplication {
     constructor(kernel) {
         super(kernel);
         this.id = "eval";
@@ -1348,7 +1370,7 @@ class KDEval extends KDApplication {
 }
 
 /** Area of functional applications */
-class KDAlert extends KDApplication {
+class KDAlertApp extends KDApplication {
     constructor(kernel) {
         super(kernel);
         this.id = "alert";
@@ -1380,6 +1402,13 @@ class KDServerInterface extends KDApplication {
 }
 */
 
+
+/**
+ * This app enable CLI to send messages to server.
+ * Messages syntax must be build like this:
+ * server consumer destination payload....
+ * consumer and destination arguments are mandatory if final destination are not server itself.
+ */
 class KDServerApp extends KDApplication {
     constructor(kernel) {
         super(kernel);
@@ -1387,8 +1416,12 @@ class KDServerApp extends KDApplication {
     }
     processMessage(message) {
         if (message.destination == this.id) {
-            // let consumer = message.reducePayload();
-            // message.consumer = consumer;
+            let consumer = message.reducePayload();
+            let destination = message.reducePayload();
+            message.consumer = consumer;
+            message.destination = destination;
+            message.producer = this.kernel.currentUser.fullName();
+            message.origin = this.id;
             let theKernel = this.kernel;
             theKernel.sendRemoteMessage(
                 message,
@@ -1397,6 +1430,25 @@ class KDServerApp extends KDApplication {
         }
     }
 }
+
+class KDSerialTimeApp extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.id = "serialtime";
+    }
+    processMessage(message) {
+        if (message.destination == this.id) {
+            let tokens = message.getTokens();
+            let d = new Date();
+            if (tokens != undefined) {
+                d = Date.parse(tokens[0]);
+            }
+            d = this.serialTime(d);
+            this.kernel.print(d);
+        }
+    }
+}
+
 
 
 class KDUserApp extends KDApplication {
@@ -1457,7 +1509,7 @@ class KDHashApp extends KDApplication {
 
 }
 
-class KDTerminal extends KDApplication {
+class KDTerminalApp extends KDApplication {
     constructor(kernel) {
         super(kernel);
         this.window = undefined;
@@ -1511,7 +1563,7 @@ class KDTerminal extends KDApplication {
                 e.preventDefault();
                 let data = ter.input.getValue();
                 ter.appendText(data);
-                let tokens = Array.from(data.matchAll(/[\w\@\d\.]+/g));
+                let tokens = Array.from(data.matchAll(KD_TOKENS));
                 let dest = tokens[0][0];
                 let m = kdMessage(dest, data.substr(dest.length).trim());
                 ter.kernel.sendLocalMessage(m);
@@ -1577,12 +1629,13 @@ class KDTerminal extends KDApplication {
 /** Main instance of KERNEL. Must be after defaults applications */
 var kdKernel = new KDKernel();
 kdKernel
-    .addApplication(KDTerminal)
-    .addApplication(KDAlert)
+    .addApplication(KDTerminalApp)
+    .addApplication(KDAlertApp)
     .addApplication(KDServerApp)
     .addApplication(KDUserApp)
     .addApplication(KDHashApp)
-    .addApplication(KDEval)
+    .addApplication(KDEvalApp)
+    .addApplication(KDSerialTimeApp)
     .initialize();
 
 

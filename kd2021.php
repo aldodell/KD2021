@@ -4,6 +4,7 @@ class KDPHP
 {
     private $OK = "OK";
     private $INVALID = "INVALID";
+    public const TOKENS = "/[\w\@\d\.\*]+/";
 
     public function getParameter($name)
     {
@@ -163,87 +164,61 @@ class KDCrypto extends KDPHP
 
 
 
-/**
- * System files:
- * messageIndex                 | store a file with last message index
- * messageABCDEFGH               | each message is store on separeted files with hexadecimal numbers        
- * 
- */
-
-class KDMessenger extends KDPHP
-{
-    private $messageSymbol = "m";
-    private $messageIndexFileName = "/messages/messageIndex";
-    private $messagePrefixFileName = "/messages/message";
-
-    function catchMessage()
-    {
-        $message = $this->getParameter($this->messageSymbol);
-        $message = json_decode($message);
-    }
-
-    function writeMessage($message)
-    {
-        $filename = $this->messagePrefixFileName . $this->incrementLastIndex();
-        file_put_contents($filename, $message);
-    }
-
-    function readLastIndex()
-    {
-        $v = file_get_contents($this->messageIndexFileName);
-        return $v;
-    }
-
-
-    function incrementIndex($index)
-    {
-        $t = str_split($index, 2);
-        $a0 = hexdec($t[3]);
-        $a1 = hexdec($t[2]);
-        $a2 = hexdec($t[1]);
-        $a3 = hexdec($t[0]);
-
-        $a0++;
-        if ($a0 == 256) {
-            $a0 = 0;
-            $a1++;
-        }
-
-        if ($a1 == 256) {
-            $a1 = 0;
-            $a2++;
-        }
-
-        if ($a2 == 256) {
-            $a2 = 0;
-            $a3++;
-        }
-
-        $h = str_pad(dechex($a3), 2, "0", STR_PAD_LEFT);
-        $h = $h . str_pad(dechex($a2), 2, "0", STR_PAD_LEFT);
-        $h = $h . str_pad(dechex($a1), 2, "0", STR_PAD_LEFT);
-        $h = $h . str_pad(dechex($a0), 2, "0", STR_PAD_LEFT);
-
-        return $h;
-    }
-
-    function incrementLastIndex()
-    {
-        $v = $this->readLastIndex();
-        $h = $this->incrementIndex($v);
-        file_put_contents($this->messageIndexFileName, $h);
-        return $h;
-    }
-
-    function readMessagesBeginAt($index)
-    {
-    }
-}
-
-
 class KDMessagesQueue extends KDPHP
 {
     private $messageSymbol = "m";
+    public $path = "messages/";
+
+
+    private function fileName($message)
+    {
+        return $this->path . $this->messageSymbol . "_" . $message->consumer . "_" . $message->date;
+    }
+
+    function append($message)
+    {
+        $message->date = date("YmdHisu");
+        $filename = $this->fileName($message);
+        $s = json_encode($message);
+        file_put_contents($filename, $s);
+    }
+
+    function getMessagesOfConsumer($consumer, $lastIndex)
+    {
+        $files = scandir($this->path);
+        $r = [];
+        foreach ($files as $file) {
+            if (substr($file, 0, 1) != ".") {
+                $i = strpos($file, "_", 0);
+                $j = strpos($file, "_", $i + 1);
+                // $k = strpos($file, "_", $j + 1);
+                $c = substr($file, $i + 1, $j - $i - 1);
+                $d = substr($file, $j + 1);
+
+                if ($consumer == $c && $d > $lastIndex) {
+                    $m = KDMessage::fromFile($this->path . $file);
+                    $r[] = $m;
+                }
+            }
+        }
+        if (count($r) == 0) {
+            return "false";
+        }
+        $s = json_encode($r);
+        return $s;
+    }
+
+    function deleteMessage($message)
+    {
+        $filename = $this->fileName($message);
+        try {
+            unlink($filename);
+        } catch (Exception $ex) {
+            die($ex);
+        }
+    }
+
+    /*
     private $messagesQueueFile = "messages/messages.json";
 
     public function append(KDMessage $message)
@@ -296,19 +271,19 @@ class KDMessagesQueue extends KDPHP
         $u->updateLastDate($m->date);
         return json_encode($r);
     }
+    */
 }
 
 class KDMessage extends KDPHP
 {
     const messageSymbol = "m";
-
     public $destination;
     public $payload;
     public $origin;
     public $producer;
     public $consumer;
     public $date;
-    
+
 
     public function __construct($destination = "", $payload = "", $origin = "", $producer = "", $consumer = "", $date = "")
     {
@@ -345,6 +320,7 @@ class KDMessage extends KDPHP
 
     public static function fromFile($filename)
     {
+        // die($filename);
         if (file_exists($filename)) {
             $f = file_get_contents($filename);
             $m = KDMessage::fromJson($f);
@@ -360,8 +336,7 @@ class KDMessage extends KDPHP
 
     function getTokens()
     {
-        $r = '/[\w\@\d\.]+/';
-        preg_match_all($r, $this->payload, $matches);
+        preg_match_all($this::TOKENS, $this->payload, $matches);
         return $matches[0];
     }
 
