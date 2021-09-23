@@ -504,4 +504,10 @@ class KDUser extends KDPHP
     {
         return json_encode($this);
     }
+
+    public static function fromMessage($message) {
+        $fullname = $message->getFullName();
+        $u = KDUser::read($fullname);
+        return $u;
+    }
 }

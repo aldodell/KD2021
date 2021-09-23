@@ -259,7 +259,7 @@ class KDVisualComponent extends KDComponent {
         return this;
     }
 
-    setEnable(bool) {
+    setEnabled(bool) {
         this.dom.disabled = !bool;
         return this;
     }
@@ -295,6 +295,11 @@ class KDVisualComponent extends KDComponent {
             return;
         }
         this.target.setSelectionRange(pos, pos);
+    }
+
+    setPlaceHolder(text) {
+        this.dom.placeholder = text;
+        return this;
     }
 
 }
@@ -371,6 +376,30 @@ class KDText extends KDVisualComponent {
 
 function kdText(properties) {
     return new KDText(properties);
+}
+
+
+/**
+ * Checkbox wrapper. Set value to 1 if checked or 0 to else.
+ */
+class KDCheckbox extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "input", "checkbox");
+
+    }
+
+    setValue(value) {
+        this.dom.checked = value == "1";
+        return this;
+    }
+
+    getValue() {
+        return this.dom.checked ? "1" : "0";
+    }
+}
+
+function kdCheckbox(properties) {
+    return new KDCheckbox(properties);
 }
 
 class KDLabel extends KDVisualComponent {
@@ -760,6 +789,10 @@ class KDServerBridge extends KDObject {
         http_request.send(this.data);
     }
 
+}
+
+function kdServerBridge(url, data, success_callback, error_callback, method, mimeType) {
+    return new KDServerBridge(url, data, success_callback, error_callback, method, mimeType);
 }
 
 
