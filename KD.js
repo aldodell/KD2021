@@ -379,6 +379,26 @@ function kdText(properties) {
 }
 
 
+class KDRadioButton extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "input", "radio");
+    }
+
+    setValue(value) {
+        this.dom.checked = value == "1";
+        return this;
+    }
+
+    getValue() {
+        return this.dom.checked ? "1" : "0";
+    }
+}
+
+function kdRadioButton(properties) {
+    return new KDRadioButton(properties);
+}
+
+
 /**
  * Checkbox wrapper. Set value to 1 if checked or 0 to else.
  */
@@ -733,6 +753,12 @@ class KDBase64 {
     }
 }
 
+
+/**
+ * 
+ * Class wich manage HTTP request.
+ * 
+ */
 class KDServerBridge extends KDObject {
     /**
      * KDServerBridge constructor
@@ -1238,6 +1264,14 @@ class KDWindow extends KDVisualContainerComponent {
         this.dom.style.width = width;
         this.dom.style.height = height;
         return this;
+    }
+
+    hide() {
+        this.dom.style.visibility = "hidden";
+    }
+
+    show() {
+        this.dom.style.visibility = "visible";
     }
 }
 

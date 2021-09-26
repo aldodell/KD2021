@@ -91,7 +91,7 @@ class KDPDO extends KDPHP
                 $count = $stmt->execute();
             } else {
                 if (!is_array($this->data)) {
-                    $this->data =  array($this->data);
+                    $this->data = array($this->data);
                 }
                 foreach ($this->data as $row) {
                     $row = (array)$row;
@@ -102,7 +102,7 @@ class KDPDO extends KDPHP
             $this->lastInsertId = $this->connection->lastInsertId();
             return $count;
         } catch (PDOException $e) {
-            echo "Error updating: " . $e->getMessage();
+            echo "Error executing: " . $e->getMessage();
             die();
         }
     }
