@@ -200,17 +200,21 @@ class KDComponent extends KDObject {
 
     clone() {
         let o = super.clone();
+
         o.dom = this.dom.cloneNode(false);
         o.dom.setAttribute("id", o.id);
         o.attachEvents(this.eventHandlers);
         if (this.value != undefined) o.setValue(this.value);
         if (this.name != undefined) o.setName(this.name);
         if (this.parent != undefined) o.parent = this.parent;
+        if (this.data != undefined) o.data = this.data;
+        if (this.textField != undefined) o.textField = this.textField;
+        if (this.valueField != undefined) o.valueField = this.valueField;
+
         o.doBeforeSetValue = this.doBeforeSetValue;
         o.valuePrefix = this.valuePrefix;
         o.valueSuffix = this.valueSuffix;
         o.dom.mirror = o;
-
         return o;
     }
 
@@ -239,6 +243,8 @@ class KDComponent extends KDObject {
         this.dom[key] = value;
         return this;
     }
+
+
 
 }
 
@@ -368,6 +374,95 @@ function kdHidden(properties) {
 
 
 
+class KDSelector extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "select");
+    }
+
+    /**
+     * 
+     * @param {*} text Name of field of data row wich will be show.
+     * @param {*} value Name of field of data row wich will be getted with getValue
+     * @returns 
+     */
+    setFields(text, value) {
+        this.textField = text;
+        this.valueField = value;
+        return this;
+    }
+
+    /**
+     * Set data to be shown 
+     * @param {*} data is an array with key:value form.
+     * @returns 
+     */
+    setData(data) {
+        this.data = data;
+        return this;
+    }
+
+    /**
+     * Clear selector.
+     * @returns 
+     */
+    clear() {
+        this.dom.innerHTML = "";
+        return this;
+    }
+
+
+    /**
+     * Fill this selector with data from data property.
+     * @returns 
+     */
+    fill() {
+        this.clear();
+        if (this.data != null) {
+            for (let obj of this.data) {
+                let opt = document.createElement("option");
+                opt.value = obj[this.valueField];
+                opt.innerHTML = obj[this.textField];
+                this.dom.appendChild(opt);
+            }
+        }
+        return this;
+    }
+
+    /**
+     * Select the row with this value
+     * @param {*} value 
+     * @returns 
+     */
+    setValue(value) {
+        this.fill();
+        super.setValue(value);
+        return this;
+    }
+
+    /**
+     * Remove an option in a selector(or all selectors with same name)
+     * @param {*} value to be removed
+     * @param {bool} all true for all selectors with same name. Otherwise just this selector.
+     */
+    removeOption(value, all) {
+        if (all) {
+            for (var sel of document.getElementsByName(this.name)) {
+                console.log(sel.id);
+                for (let i = sel.options.length - 1; i >= 0; i--) {
+                    if (sel.options[i].value == value) {
+                        sel.remove(i);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function kdSelector(properties) {
+    return new KDSelector(properties);
+}
+
+
 class KDText extends KDVisualComponent {
     constructor(properties) {
         super(properties, "input", "text");
@@ -421,6 +516,36 @@ class KDCheckbox extends KDVisualComponent {
 function kdCheckbox(properties) {
     return new KDCheckbox(properties);
 }
+
+
+class KDScript extends KDVisualComponent {
+    constructor(properties) {
+        super(properties, "script");
+
+    }
+
+    setValue(value) {
+        this.doBeforeSetValue(this);
+        this.value = value;
+        value = this.completeValue(value);
+        this.dom.src = value;
+        return this;
+    }
+
+    getValue() {
+        return this.dom.src;
+    }
+
+    setAsync(value) {
+        this.dom.async = value;
+        return this;
+    }
+}
+
+function kdScript(properties) {
+    return new KDScript(properties);
+}
+
 
 class KDLabel extends KDVisualComponent {
     constructor(properties) {
