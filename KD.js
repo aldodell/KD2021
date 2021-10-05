@@ -1266,6 +1266,10 @@ class KDApplication extends KDObject {
         this.status = KDApplicationStatus.STOPPED;
     }
 
+    /**
+     * This method ask to current user object if has permission to open.
+     * @returns boolean 
+     */
     requestAuthorization() {
         return this.kernel.currentUser.checkAuthorizedApplication(this.id);
     }
@@ -1754,6 +1758,8 @@ class KDTerminalApp extends KDApplication {
         this.prefix = new KDSpan(kdStyles({ "fontFamily": "inherit", "fontSize": "inherit" }));
         this.input = new KDText(kdStyles({ "backgroundColor": "inherit", "color": "inherit", "border": "none", "outline": "none", "fontFamily": "inherit", "fontSize": "inherit" }));
         this.owner = undefined;
+        this.lastLines = [];
+        this.lastLinesIndex = 0;
     }
 
     focus(e) {
@@ -1772,6 +1778,7 @@ class KDTerminalApp extends KDApplication {
         this.window.body.wrap(this.input);
         this.input.dom.terminal = this;
         this.input.dom.addEventListener("keypress", this.processKey);
+        this.input.dom.addEventListener("keydown", this.processKey2);
         this.window.body.dom.addEventListener("click", this.focus);
         this.prefix.setValue(this.kernel.currentUser.fullName() + ">");
     }
@@ -1805,7 +1812,32 @@ class KDTerminalApp extends KDApplication {
                 let m = kdMessage(dest, data.substr(dest.length).trim());
                 ter.kernel.sendLocalMessage(m);
                 ter.input.setValue("");
+                ter.lastLines.push(data);
+                ter.lastLinesIndex = ter.lastLines.length - 1;
                 break;
+
+            default:
+                break;
+
+        }
+    }
+
+    processKey2(e) {
+        let ter = e.target.terminal;
+        switch (e.keyCode) {
+
+            case 38:
+                ter.lastLinesIndex--;
+                if (ter.lastLinesIndex < 0) ter.lastLinesIndex = ter.lastLines.length - 1;
+                ter.input.setValue(ter.lastLines[ter.lastLinesIndex]);
+                break;
+
+            case 40:
+                ter.lastLinesIndex++;
+                if (ter.lastLinesIndex == ter.lastLinesIndex) ter.lastLines.length = 0;
+                ter.input.setValue(ter.lastLines[ter.lastLinesIndex]);
+                break;
+
 
             default:
                 break;
