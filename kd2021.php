@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * PHP utils tools
+ */
 class KDPHP
 {
     private $OK = "OK";
@@ -43,9 +46,9 @@ class KDPHP
 }
 
 
-/***
- * KD PHP framework
- * June 2021
+
+/**
+ * PHP Data Object model for KD
  */
 class KDPDO extends KDPHP
 {
@@ -163,7 +166,9 @@ class KDCrypto extends KDPHP
 
 
 
-
+/**
+ * Message handler queue class
+ */
 class KDMessagesQueue extends KDPHP
 {
     private $messageSymbol = "m";
@@ -274,6 +279,9 @@ class KDMessagesQueue extends KDPHP
     */
 }
 
+/**
+ * Message wrapper
+ */
 class KDMessage extends KDPHP
 {
     const messageSymbol = "m";

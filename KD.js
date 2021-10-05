@@ -456,6 +456,15 @@ class KDSelector extends KDVisualComponent {
             }
         }
     }
+
+
+    clone() {
+        let o = super.clone();
+        for (let e of this.dom.options) {
+            o.dom.appendChild(e.cloneNode(true));
+        }
+        return o;
+    }
 }
 
 function kdSelector(properties) {
@@ -876,6 +885,42 @@ class KDBase64 {
     fromBase64(bin) {
         return decodeURIComponent(window.atob(bin));
     }
+}
+
+class KDData {
+    constructor(data) {
+        this.innerData = data;
+    }
+
+    setData(data) {
+        this.innerData = data;
+        return this;
+    }
+
+    getData() {
+        return this.innerData;
+    }
+    parseJson(string) {
+        this.innerData = JSON.parse(string);
+        return this;
+    }
+    toString() {
+        return JSON.stringify(this.innerData);
+    }
+
+    filter(filterFunction) {
+        var data2 = [];
+        for (let e of this.innerData) {
+            if (filterFunction(e)) {
+                data2.push(e);
+            }
+        }
+        return data2;
+    }
+}
+
+function kdData(data) {
+    return new KDData(data);
 }
 
 
