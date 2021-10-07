@@ -14,9 +14,11 @@ const serverVersion = "KD Server 1.0 (alpha) 2021\n";
 
 //Get request from user:
 $message = KDMessage::fromRequest(messageSymbol);
+print_r($message);
+die();
 
 //Filter messages to system:
-if ($message->destination == "server") {
+if ($message->origin == "server") {
     $message->date  = date("YmdHisu");
     $tokens = $message->getTokens();
 

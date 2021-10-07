@@ -11,12 +11,10 @@ class KDPHP
 
     public function getParameter($name)
     {
-
         $r = $this->INVALID;
         if (isset($_REQUEST[$name])) {
             $r = $_REQUEST[$name];
         }
-
         return $r;
     }
 
@@ -34,7 +32,6 @@ class KDPHP
 
         $d = "";
         foreach ($b as $e) {
-            //echo $e;
             $d .= dechex($e);
         }
 
@@ -56,7 +53,6 @@ class KDPDO extends KDPHP
     public $data = null;
     public $lastInsertId = null;
     public $root = "root";
-
 
     public function __construct($connection, $datasetName)
     {
@@ -222,61 +218,6 @@ class KDMessagesQueue extends KDPHP
             die($ex);
         }
     }
-
-    /*
-    private $messagesQueueFile = "messages/messages.json";
-
-    public function append(KDMessage $message)
-    {
-        $f = "";
-
-        if (!file_exists($this->messagesQueueFile)) {
-            $f = "[" . $message->toString() . "]";
-        } else {
-            $f = file_get_contents($this->messagesQueueFile);
-            $f = substr($f, 0, strlen($f) - 1) . "," . $message->toString() . "]";
-        }
-        file_put_contents($this->messagesQueueFile, $f, LOCK_EX);
-    }
-
-    public function getMessages()
-    {
-
-        $messages = [];
-        try {
-            if (file_exists($this->messagesQueueFile)) {
-                $r = file_get_contents($this->messagesQueueFile);
-                $j = json_decode($r, true);
-                foreach ($j as $m) {
-                    $messages[] = KDMessage::fromArray($m);
-                }
-            }
-        } catch (Exception $ex) {
-            die($ex);
-        }
-        if (count($messages) == 0) $messages = "false";
-        return $messages;
-    }
-
-
-    public function getMessagesOfConsumer($consumer, $from = "0")
-    {
-
-        $messages = $this->getMessages();
-        if ($messages == "false") return $messages;
-        $r = [];
-        foreach ($messages as $m) {
-            if ($m->consumer == $consumer && $m->date > $from) {
-                $r[] = $m;
-            }
-        }
-
-        $m = end($r);
-        $u =  KDUser::read($m->consumer);
-        $u->updateLastDate($m->date);
-        return json_encode($r);
-    }
-    */
 }
 
 /**
@@ -310,6 +251,15 @@ class KDMessage extends KDPHP
         return KDMessage::fromArray($obj);
     }
 
+    /** Build a message object from an array
+     * parts:
+     *          destination
+     *          payload
+     *          origin
+     *          producer
+     *          consumer
+     *          date
+     */
     public static function fromArray($obj)
     {
         $m = new KDMessage($obj["destination"], $obj["payload"], $obj["origin"], $obj["producer"], $obj["consumer"], $obj["date"]);
@@ -467,7 +417,7 @@ class KDUser extends KDPHP
         $u = new KDUser($fullName);
         $filename = $u->usersPath . $u->getFullName();
         if (!file_exists($filename)) {
-            throw new KDUserExistException($u->getFullName());
+            throw new KDUserNotExistException($u->getFullName());
         } else {
             $f = file_get_contents($filename);
             $j = json_decode($f, true);
@@ -513,7 +463,8 @@ class KDUser extends KDPHP
         return json_encode($this);
     }
 
-    public static function fromMessage($message) {
+    public static function fromMessage($message)
+    {
         $fullname = $message->getFullName();
         $u = KDUser::read($fullname);
         return $u;

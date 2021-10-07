@@ -1055,9 +1055,6 @@ function kdColor(r, g, b, a) {
 
 
 /********************* APPLICATIONS AREA ********************/
-
-
-
 /**
  * Wrapper for messages
  */
@@ -1335,8 +1332,9 @@ function kdUser(fullName) {
     return new KDUser(name, organization);
 }
 
-/** Windows and dialogs area */
-
+/** 
+ * Windows and dialogs area 
+ * */
 class KDWindowManager extends KDObject {
     constructor(properties) {
         super(properties);
@@ -1691,7 +1689,7 @@ class KDSerialTimeApp extends KDApplication {
 }
 
 
-
+/*
 class KDUserApp extends KDApplication {
     constructor(kernel) {
         super(kernel);
@@ -1701,18 +1699,20 @@ class KDUserApp extends KDApplication {
     processMessage(message) {
         if (message.destination == this.id) {
             let tokens = message.getTokens();
+            let fullname = tokens[1];
+            let hashPassword = this.hash(tokens[2]);
+            let theKernel = this.kernel;
+
             switch (tokens[0]) {
                 case "login":
-                    let fullname = tokens[1];
-                    let hashPassword = this.hash(tokens[2]);
-                    let m = kdMessage("server",
+                    let ma = kdMessage("server",
                         "login " + fullname + " " + hashPassword,
                         this.id,
                         "",
                         ""
                     );
-                    let theKernel = this.kernel;
-                    this.kernel.sendRemoteMessage(m, function (answer) {
+
+                    this.kernel.sendRemoteMessage(ma, function (answer) {
                         let obj = JSON.parse(answer);
                         if (obj.name) {
                             let u = new KDUser();
@@ -1728,10 +1728,34 @@ class KDUserApp extends KDApplication {
                         }
                     });
                     break;
+
+                case "create":
+                    let mb = kdMessage("server",
+                        "create user " + fullname + " " + hashPassword,
+                        this.id,
+                        "",
+                        ""
+                    );
+
+                    this.kernel.sendRemoteMessage(mb, function (answer) {
+                        let obj = JSON.parse(answer);
+                        if (obj.name) {
+                            let u = new KDUser();
+                            theKernel.currentUser = u.fromJson(answer);
+                            let m0 = kdMessage("terminal", "print user create!", this.id, theKernel.currentUser, theKernel.currentUser);
+                            theKernel.sendLocalMessage(m0);
+                        } else {
+                            let m = new KDMessage();
+                            m = m.fromJson(answer);
+                            theKernel.sendLocalMessage(m);
+                        }
+                    });
+                    break;
             }
         }
     }
 }
+*/
 
 
 class KDHashApp extends KDApplication {
@@ -1755,8 +1779,8 @@ class KDTerminalApp extends KDApplication {
         super(kernel);
         this.window = undefined;
         this.id = "terminal";
-        this.prefix = new KDSpan(kdStyles({ "fontFamily": "inherit", "fontSize": "inherit" }));
-        this.input = new KDText(kdStyles({ "backgroundColor": "inherit", "color": "inherit", "border": "none", "outline": "none", "fontFamily": "inherit", "fontSize": "inherit" }));
+        this.prefix = new KDSpan(kdStyles({ "fontFamily": "inherit", "fontSize": "inherit", "width": "calc(20%)" }));
+        this.input = new KDText(kdStyles({ "backgroundColor": "inherit", "color": "inherit", "border": "none", "outline": "none", "fontFamily": "inherit", "fontSize": "inherit", "width": "calc(80%)" }));
         this.owner = undefined;
         this.lastLines = [];
         this.lastLinesIndex = 0;
@@ -1823,16 +1847,19 @@ class KDTerminalApp extends KDApplication {
     }
 
     processKey2(e) {
+
         let ter = e.target.terminal;
         switch (e.keyCode) {
 
             case 38:
+                e.preventDefault();
                 ter.lastLinesIndex--;
                 if (ter.lastLinesIndex < 0) ter.lastLinesIndex = ter.lastLines.length - 1;
                 ter.input.setValue(ter.lastLines[ter.lastLinesIndex]);
                 break;
 
             case 40:
+                e.preventDefault();
                 ter.lastLinesIndex++;
                 if (ter.lastLinesIndex == ter.lastLinesIndex) ter.lastLines.length = 0;
                 ter.input.setValue(ter.lastLines[ter.lastLinesIndex]);
@@ -1901,7 +1928,7 @@ kdKernel
     .addApplication(KDTerminalApp)
     .addApplication(KDAlertApp)
     .addApplication(KDServerApp)
-    .addApplication(KDUserApp)
+    // .addApplication(KDUserApp)
     .addApplication(KDHashApp)
     .addApplication(KDEvalApp)
     .addApplication(KDSerialTimeApp)
