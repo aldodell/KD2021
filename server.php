@@ -14,11 +14,11 @@ const serverVersion = "KD Server 1.0 (alpha) 2021\n";
 
 //Get request from user:
 $message = KDMessage::fromRequest(messageSymbol);
-print_r($message);
-die();
+//print_r($message);
+//die();
 
 //Filter messages to system:
-if ($message->origin == "server") {
+if ($message->destination == "server") {
     $message->date  = date("YmdHisu");
     $tokens = $message->getTokens();
 
@@ -33,7 +33,6 @@ if ($message->origin == "server") {
              */
         case "getMessages":
             $u = KDUser::read($message->consumer);
-            //$index = $u->lastMessageIndex;
             $qm = new KDMessagesQueue();
             $msgs = $qm->getMessagesOfConsumer($u->getFullName(), $tokens[1]);
             echo $msgs;
@@ -57,6 +56,7 @@ if ($message->origin == "server") {
                 $u->hashPassword = $message->hash($tokens[3]);
                 try {
                     $u->create();
+                    echo "User $fullName created!";
                 } catch (KDUserExistException $ex) {
                     die($ex->getMessage());
                 }
@@ -64,16 +64,17 @@ if ($message->origin == "server") {
             break;
 
         case "login":
-
             $fullName = $tokens[1];
             $hashPassword = $tokens[2];
             try {
                 $u = KDUser::read($fullName);
             } catch (KDUserNotExistException $ex) {
-                die("NO");
+                die("User $hashPassword doesn't exits!");
             }
             if ($u->hashPassword == $hashPassword) {
-                echo $u->toString();
+                //echo $u->toString();
+                $m = new KDMessage("KERNEL", "setUser " . $u->getFullName() . " " . json_encode($u->authorizedApplications), "SYSTEM", "SYSTEM", $message->producer);
+                echo $m->toString();
             } else {
                 $m = new KDMessage("terminal", "print Password wrong!", "server", "", "");
                 echo $m->toString();
@@ -81,10 +82,11 @@ if ($message->origin == "server") {
             break;
 
 
-        case "authorize": //server authorize app to user
+        case "authorize": //server x y authorize app to user
             if ($tokens[2] == "to") {
                 $applicationName = $tokens[1];
                 $userFullName = $tokens[3];
+               
                 KDUser::addApplication($userFullName, $applicationName);
                 echo "$applicationName authorized to $userFullName\n";
             }
