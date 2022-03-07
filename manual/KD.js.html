@@ -1,4 +1,32 @@
-"use strict";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: KD.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: KD.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>"use strict";
 
 var kdId = 0;
 const KD_ALL = ".*";
@@ -83,9 +111,9 @@ class KDObject {
     hash(text) {
         let b = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241];
 
-        for (let i = 0; i < text.length; i++) {
+        for (let i = 0; i &lt; text.length; i++) {
             let c = text.charCodeAt(i);
-            for (let j = 0; j < b.length; j++) {
+            for (let j = 0; j &lt; b.length; j++) {
                 b[j] *= c;
                 b[j] %= 251;
             }
@@ -153,7 +181,7 @@ class KDComponent extends KDObject {
 
         this.doBeforeSetValue = function (obj) { };
 
-        if (properties != undefined && properties.value != undefined) {
+        if (properties != undefined &amp;&amp; properties.value != undefined) {
             this.setValue(properties.value);
         }
 
@@ -327,7 +355,7 @@ class KDVisualComponent extends KDComponent {
      * @returns self reference
      */
     setStyles(obj) {
-        if (obj && obj.style) {
+        if (obj &amp;&amp; obj.style) {
             for (let style in obj.style) {
                 this.dom.style[style] = obj.style[style];
             }
@@ -1283,9 +1311,9 @@ class KDKernel extends KDObject {
     }
 
     /**
-     * Load a javascript file and retrieve the {@link KDApplication}.<br/>
-     * <b>IMPORTANT: File name must end in ".js", and must be
-     * equal to class name.</b>
+     * Load a javascript file and retrieve the {@link KDApplication}.&lt;br/>
+     * &lt;b>IMPORTANT: File name must end in ".js", and must be
+     * equal to class name.&lt;/b>
      * 
      * @param {String} className 
      * @param {Bool} runAfterLoad Indicate if runs inmediatly after load script.
@@ -2007,9 +2035,9 @@ class KDHashApp extends KDApplication {
 /**
  * Usefull terminal likes bash style. Create a {@link KDWindow} and publish it.
  * All commands are proccessed after ENTER KEY are press.
- * <br/>In order to send a {@link KDMessage} (local or remote) use this syntax: <b>destination</b> <i>payload</i>.
- * <p>See {@link KDKernel} to get information about how KERNEL proccess local messages.</p>
- * <p>See {@link KDServerApp} to get information about how to send {@link KDMessage} to server.</p>
+ * &lt;br/>In order to send a {@link KDMessage} (local or remote) use this syntax: &lt;b>destination&lt;/b> &lt;i>payload&lt;/i>.
+ * &lt;p>See {@link KDKernel} to get information about how KERNEL proccess local messages.&lt;/p>
+ * &lt;p>See {@link KDServerApp} to get information about how to send {@link KDMessage} to server.&lt;/p>
  * 
  */
 class KDTerminalApp extends KDApplication {
@@ -2097,7 +2125,7 @@ class KDTerminalApp extends KDApplication {
             case 38:
                 e.preventDefault();
                 ter.lastLinesIndex--;
-                if (ter.lastLinesIndex < 0) ter.lastLinesIndex = ter.lastLines.length - 1;
+                if (ter.lastLinesIndex &lt; 0) ter.lastLinesIndex = ter.lastLines.length - 1;
                 ter.input.setValue(ter.lastLines[ter.lastLinesIndex]);
                 break;
 
@@ -2176,4 +2204,26 @@ kdKernel
     .addApplication(KDEvalApp)
     .addApplication(KDSerialTimeApp)
     .addApplication(KDLoginApp)
-    .initialize();
+    .initialize();</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="KDAlertApp.html">KDAlertApp</a></li><li><a href="KDApplication.html">KDApplication</a></li><li><a href="KDBase64.html">KDBase64</a></li><li><a href="KDCheckbox.html">KDCheckbox</a></li><li><a href="KDComponent.html">KDComponent</a></li><li><a href="KDDictionary.html">KDDictionary</a></li><li><a href="KDDropFileZone.html">KDDropFileZone</a></li><li><a href="KDEvalApp.html">KDEvalApp</a></li><li><a href="KDFile.html">KDFile</a></li><li><a href="KDKernel.html">KDKernel</a></li><li><a href="KDMessage.html">KDMessage</a></li><li><a href="KDObject.html">KDObject</a></li><li><a href="KDServerApp.html">KDServerApp</a></li><li><a href="KDServerBridge.html">KDServerBridge</a></li><li><a href="KDStyles.html">KDStyles</a></li><li><a href="KDTerminalApp.html">KDTerminalApp</a></li><li><a href="KDUser.html">KDUser</a></li><li><a href="KDVisualComponent.html">KDVisualComponent</a></li><li><a href="KDVisualContainerComponent.html">KDVisualContainerComponent</a></li><li><a href="KDWindow.html">KDWindow</a></li><li><a href="KDWindowManager.html">KDWindowManager</a></li></ul><h3>Global</h3><ul><li><a href="global.html#kdKernel">kdKernel</a></li><li><a href="global.html#kdMessage">kdMessage</a></li><li><a href="global.html#kdWindowManagerInstance">kdWindowManagerInstance</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Mon Oct 11 2021 02:15:39 GMT-0400 (hora de Venezuela)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
