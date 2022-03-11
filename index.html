@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<html>
+
+<style>
+    code {color: wheat; text-decoration-color: blue;}
+    label {color: darkorange;}
+</style>
+
+<body>
+    <script src="KD.js"></script>
+    <script>
+
+        //Make window
+       // var win = kdWindow(kdWindowTerminalTheme);
+       // win.publish().setTitle("Test!");
+
+        //Launch terminal>
+
+        kdKernel.sendLocalMessage(kdMessage("terminal"));
+
+    </script>
+</body>
+
+</html>

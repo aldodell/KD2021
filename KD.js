@@ -2203,19 +2203,23 @@ class KDHack extends KDApplication {
         this.mode = undefined;
         this.currentAsk = [];
         this.curentInput = undefined;
+        this.commands = [];
 
-/**
- * text: just show a text
- * time: milliseconds to next stage
- * label: 
- */
+        /**
+         * text: just show a text
+         * time: milliseconds to next stage
+         * id: identifier 
+         * command: command simulator
+         * exe: call a function
+         */
 
 
         this.stage = [
             {
                 text: "Anónimo: Hola, soy Anónimo. ¿Me ayudas a detener a los malvados? \n     /\ \n     /  \   _ __   ___  _ __  _   _ _ __ ___   ___  _   _ ____ \n    / /\ \ | '_ \ / _ \| '_ \| | | | '_ ` _ \ / _ \| | | / __| \n / ____ \| | | | (_) | | | | |_| | | | | | | (_) | |_| \__ \ \n /_/    \_\_| |_|\___/|_| |_|\__, |_| |_| |_|\___/ \__,_|___/ \n                               __/ |\n                             |___/",
                 time: 2000,
-                id: 1
+                id: 1,
+                
             },
             {
                 text: "Anónimo: Aguarda mis instrucciones...",
@@ -2287,7 +2291,8 @@ class KDHack extends KDApplication {
             {
 
                 text: "Anónimo: el comando <code> net main</code> sirve para entrar en la red central. Quizá te pidan un nombre de usuario y contraseña",
-                id: 13
+                id: 13,
+                command: { text: "net main", jumpToId: 14 }
             },
 
             {
@@ -2317,9 +2322,6 @@ class KDHack extends KDApplication {
                 input: "Indique su nombre de usuario ahora:",
 
             }
-
-
-
 
         ];
 
@@ -2366,6 +2368,17 @@ class KDHack extends KDApplication {
             this.kernel.sendLocalMessage(m);
         }
 
+        if (stage.command != undefined) {
+            this.commands.push(stage.command);
+            let s = JSON.stringify(stage.command);
+            var m = kdMessage("hack", s);
+            this.kernel.sendLocalMessage(m);
+        }
+
+        if (stage.exe != undefined) {
+            stage.exe();
+        }
+
     }
 
     runStageById(id) {
@@ -2374,7 +2387,7 @@ class KDHack extends KDApplication {
                 if (this.stage[i].id == id) {
                     this.idStage = i;
                     this.runStage();
-                    
+
                 }
             }
 
@@ -2387,7 +2400,6 @@ class KDHack extends KDApplication {
         if (this.mode == undefined) {
             let tokens = message.payload.split(" ");
             switch (tokens[0]) {
-               
                 case ".":
                     this.runStage();
                     break;
@@ -2397,11 +2409,15 @@ class KDHack extends KDApplication {
                     this.runStage();
                     break;
 
-                case "net":
-                    if (tokens[1] == "main") {
-                        this.runStageById(14);
+                default:
+                    for (let i = 0; i < this.commands.length; i++) {
+                        if (this.commands[i].text == message.payload) {
+                            if (this.commands[i].jumpToId != undefined) {
+                                this.runStageById(this.commands[i].jumpToId);
+                            }
+                        }
                     }
-
+                    break;
 
             }
 
@@ -2410,7 +2426,7 @@ class KDHack extends KDApplication {
 
             for (let i = 0; i < this.currentAsk.length; i++) {
                 if (message.payload == this.currentAsk[i].text) {
-                    this.runStageById(this.currentAsk[i].label);
+                    this.runStageById(this.currentAsk[i].id);
                 }
             }
             this.currentAsk = undefined;
@@ -2419,7 +2435,6 @@ class KDHack extends KDApplication {
 
         } else if (this.mode == "input") {
             this.curentInput = window.prompt(message.payload)
-            alert(this.curentInput);
             this.mode = undefined;
         }
 
