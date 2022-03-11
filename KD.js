@@ -1234,8 +1234,19 @@ function kdMessage(destination, payload, origin, producer, consumer) {
 }
 
 /**
- * KicsyDell Kernel Object
+ * KicsyDell Kernel Object.
+ * 
+ * This class wrap a main routines like a system operating kernel. 
+ * Has the responsability of send, read and proccess messages through differents internet nodes
+ * wich support KD. Loads KD applications, and connect those with a server(PHP kind server).
+ * It is a entry point too.
+ * All html files wich are used to run KD applications must implements a KD kernel in this way:
+ * <code>var kdKernel = new KDKernel();</code>
+ * The main file KD.js has this line implemented. So its't neccesary write it again.
+ * 
+ * 
  * @extends KDObject
+ * 
  */
 class KDKernel extends KDObject {
     constructor() {
@@ -1674,8 +1685,8 @@ class KDWindowDefaultTheme extends KDObject {
                     position: "absolute",
                     display: "inline-block",
                     border: "1px solid black",
-                    height: "40vh",
-                    width: "50vw",
+                    height: "60vh",
+                    width: "70vw",
                     padding: "0px",
                 },
                 head: {
@@ -1706,14 +1717,14 @@ class KDWindowDefaultTheme extends KDObject {
                         position: "inherit",
                         display: "inherit",
                         border: "inherit",
-                        height: "calc(100% - 80px)",
-                        width: "calc(100% - 8px)",
+                        height: "calc(100% - 88px)",
+                        width: "calc(100% - 16px)",
                         left: "-1px",
                         top: "40px",
                         backgroundColor: "white",
                         overflow: "scroll",
                         fontSize: "1em",
-                        padding: "4px",
+                        padding: "8px",
                         whiteSpace: "pre-wrap",
 
                     }
@@ -2010,7 +2021,7 @@ class KDHashApp extends KDApplication {
  * <br/>In order to send a {@link KDMessage} (local or remote) use this syntax: <b>destination</b> <i>payload</i>.
  * <p>See {@link KDKernel} to get information about how KERNEL proccess local messages.</p>
  * <p>See {@link KDServerApp} to get information about how to send {@link KDMessage} to server.</p>
- * 
+ * <p>A way to run the terminal is via  <code>kdKernel.sendLocalMessage(kdMessage("terminal"));</code></p>
  */
 class KDTerminalApp extends KDApplication {
     constructor(kernel) {
@@ -2061,6 +2072,7 @@ class KDTerminalApp extends KDApplication {
             node.innerHTML = code;
             this.window.body.dom.insertBefore(node, this.prefix.dom);
             this.input.dom.focus();
+            this.window.body.dom.scrollTop = this.window.body.dom.scrollHeight;
         }
     }
 
@@ -2073,10 +2085,22 @@ class KDTerminalApp extends KDApplication {
                 let data = ter.input.getValue();
                 ter.appendText(data);
                 if (data.length > 0) {
+
                     let tokens = Array.from(data.matchAll(KD_TOKENS));
                     let dest = tokens[0][0];
-                    let m = kdMessage(dest, data.substr(dest.length).trim());
-                    ter.kernel.sendLocalMessage(m);
+
+                    if (dest == ter.id && data.substr(dest.length).trim() == "release") {
+                        ter.owner = undefined;
+                    }
+
+                    if (ter.owner == undefined) {
+                        let m = kdMessage(dest, data.substr(dest.length).trim());
+                        ter.kernel.sendLocalMessage(m);
+                    } else {
+                        let dest = ter.owner;
+                        let m = kdMessage(dest, data.trim());
+                        ter.kernel.sendLocalMessage(m);
+                    }
                     ter.input.setValue("");
                     ter.lastLines.push(data);
                     ter.lastLinesIndex = ter.lastLines.length - 1;
@@ -2116,26 +2140,32 @@ class KDTerminalApp extends KDApplication {
     }
 
     processMessage(message) {
+
         if (message.destination == this.id || message.destination == "!") {
             if (message.payload == undefined) {
                 this.run();
             } else {
                 let tokens = message.getTokens();
                 switch (tokens[0]) {
-                    /*
-                     case "take":
-                         if (tokens.length > 1) {
-                             let owner = tokens[1];
-                             if (this.kernel.constainsApplication(owner)) {
-                                 this.owner = tokens[1];
-                             }
-                         }
-                         break;
- 
-                     case "release":
-                         this.owner = "";
-                         break;
-                         */
+
+                    /* 
+                    When a message was send to terminal and its first parameter is take
+                    make this app the new terminal owner
+                    */
+                    case "take":
+                        if (tokens.length > 1) {
+                            let owner = tokens[1];
+                            if (this.kernel.constainsApplication(owner)) {
+                                this.owner = tokens[1];
+                                this.appendText("[" + this.owner + "]");
+                            }
+                        }
+                        break;
+
+                    case "release":
+                        this.owner = null;
+                        break;
+
 
                     case "show":
                         if (tokens[1] == "applications") {
@@ -2165,6 +2195,239 @@ class KDTerminalApp extends KDApplication {
     }
 }
 
+class KDHack extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.id = "hack";
+        this.idStage = 0;
+        this.mode = undefined;
+        this.currentAsk = [];
+        this.curentInput = undefined;
+
+/**
+ * text: just show a text
+ * time: milliseconds to next stage
+ * label: 
+ */
+
+
+        this.stage = [
+            {
+                text: "Anónimo: Hola, soy Anónimo. ¿Me ayudas a detener a los malvados? \n     /\ \n     /  \   _ __   ___  _ __  _   _ _ __ ___   ___  _   _ ____ \n    / /\ \ | '_ \ / _ \| '_ \| | | | '_ ` _ \ / _ \| | | / __| \n / ____ \| | | | (_) | | | | |_| | | | | | | (_) | |_| \__ \ \n /_/    \_\_| |_|\___/|_| |_|\__, |_| |_| |_|\___/ \__,_|___/ \n                               __/ |\n                             |___/",
+                time: 2000,
+                id: 1
+            },
+            {
+                text: "Anónimo: Aguarda mis instrucciones...",
+                time: 1000,
+                id: 2
+
+            },
+            {
+                text: "Anónimo: Si deseas continuar debes tomar el control de este terminal",
+                time: 1000,
+                id: 3
+
+            },
+            {
+                text: "Anónimo: para lograr eso escribe el siguiente comando:<code>terminal take hack</code> y pulsa ENTER. Luego escribe <code>stage++</code> para avanzar a la siguiente instrucción.",
+                id: 4
+
+            },
+            {
+                text: "Anónimo: Bienvenido de nuevo. Ahora todo será más sencillo",
+                time: 2000,
+                id: 5
+
+            },
+            {
+                text: "Anónimo: Necesito que entiendas que esto es peligroso.",
+                time: 1000,
+                id: 6
+
+            },
+            {
+                text: "Anónimo: Mucha gente depende de ti ahora. ¿Lo entiendes?",
+                time: 1000,
+                id: 7
+
+            },
+            {
+                text: "Anónimo: Escribe <code>si</code> o <code>no</code> cuando te pregunte algo",
+                time: 1000,
+                id: 8
+
+            },
+
+            {
+                ask: [{ text: "si", id: 11 }, { text: "no", id: 10 }],
+                id: 9
+            },
+
+            {
+                id: 10,
+                text: "Anónimo: ¡Látima! ¡Pensé que podríamos lograrlo! Chaoooo.",
+
+            },
+
+
+            {
+                id: 11,
+                text: "Anónimo: ¡Lo sabía! Eres muy valiente",
+                time: 1000
+            },
+
+            {
+
+                text: "Anónimo: Ahora tenemos que entrar al computador central para ver qué esconden",
+                time: 1000,
+                id: 12
+            },
+
+            {
+
+                text: "Anónimo: el comando <code> net main</code> sirve para entrar en la red central. Quizá te pidan un nombre de usuario y contraseña",
+                id: 13
+            },
+
+            {
+
+                text: "Conectando...",
+                time: 500,
+                id: 14
+
+            },
+            {
+
+                text: "Puerto 2345/45kb",
+                time: 500,
+                id: 15
+
+            },
+            {
+
+                text: "**** NETWORK ACCESS POINT ****",
+                time: 500,
+                id: 16
+
+            },
+            {
+
+                id: 17,
+                input: "Indique su nombre de usuario ahora:",
+
+            }
+
+
+
+
+        ];
+
+
+
+    }
+
+
+    runStage() {
+
+        let stage = this.stage[this.idStage];
+        let thisApp = this;
+
+        if (stage.text != undefined) {
+            let m = kdMessage("terminal", "print " + stage.text)
+            this.kernel.sendLocalMessage(m);
+        }
+
+        if (stage.time != undefined) {
+            window.setTimeout(function () { thisApp.idStage++; thisApp.runStage() }, stage.time)
+        }
+
+        if (stage.ask != undefined) {
+            this.mode = "ask";
+            this.currentAsk = stage.ask;
+            var opts = "";
+            for (let i = 0; i < this.currentAsk.length; i++) {
+                opts += "<code>" + stage.ask[i].text + "</code>/";
+
+            }
+            opts = opts.substring(0, opts.length - 1);
+
+            var m = kdMessage("terminal", "print <label>opciones:</label> " + opts)
+            this.kernel.sendLocalMessage(m);
+
+            m = kdMessage("ask")
+            this.kernel.sendLocalMessage(m);
+
+        }
+
+        if (stage.input != undefined) {
+            this.mode = "input";
+            var m = kdMessage("hack", stage.input)
+            this.kernel.sendLocalMessage(m);
+        }
+
+    }
+
+    runStageById(id) {
+        for (let i = 0; i < this.stage.length; i++) {
+            if (this.stage[i].id != undefined) {
+                if (this.stage[i].id == id) {
+                    this.idStage = i;
+                    this.runStage();
+                    
+                }
+            }
+
+        }
+    }
+
+
+    processMessage(message) {
+
+        if (this.mode == undefined) {
+            let tokens = message.payload.split(" ");
+            switch (tokens[0]) {
+               
+                case ".":
+                    this.runStage();
+                    break;
+
+                case "stage++":
+                    this.idStage++;
+                    this.runStage();
+                    break;
+
+                case "net":
+                    if (tokens[1] == "main") {
+                        this.runStageById(14);
+                    }
+
+
+            }
+
+        } else if (this.mode == "ask") {
+            //Si hay alguna pregunta activa
+
+            for (let i = 0; i < this.currentAsk.length; i++) {
+                if (message.payload == this.currentAsk[i].text) {
+                    this.runStageById(this.currentAsk[i].label);
+                }
+            }
+            this.currentAsk = undefined;
+            this.mode = undefined;
+
+
+        } else if (this.mode == "input") {
+            this.curentInput = window.prompt(message.payload)
+            alert(this.curentInput);
+            this.mode = undefined;
+        }
+
+    }
+}
+
+
+
 /** Main instance of KERNEL. Must be after defaults applications */
 var kdKernel = new KDKernel();
 kdKernel
@@ -2176,4 +2439,6 @@ kdKernel
     .addApplication(KDEvalApp)
     .addApplication(KDSerialTimeApp)
     .addApplication(KDLoginApp)
+    .addApplication(KDHack)
+
     .initialize();
