@@ -30,10 +30,11 @@
 
 var kdId = 0;
 const KD_ALL = ".*";
-const KD_TOKENS = /[\w\@\d\.\*]+/g;
+const KD_TOKENS = /[A-zÀ-ú\@\d\.\*\\]+/g;
 
 /**
  * Master object of KD Api
+ * @interface
  */
 class KDObject {
     constructor(properties) {
@@ -159,6 +160,7 @@ class KDObject {
 /**
  * Base class for KD components
  *  @extends KDObject
+ * @interface
  */
 class KDComponent extends KDObject {
     constructor(properties, htmlClass, htmlType) {
@@ -342,6 +344,7 @@ class KDComponent extends KDObject {
 /**
  * Base class of visual components.
  *  @extends KDComponent
+ * @interface
  */
 class KDVisualComponent extends KDComponent {
     constructor(properties, htmlClass, htmlType) {
@@ -441,6 +444,10 @@ class KDVisualContainerComponent extends KDVisualComponent {
         if (this.components == undefined) this.components = [];
     }
 
+    /**
+     * Wrap a components array. Could be used convenience methods in order to create components.
+     * @returns itself.
+     */
     wrap() {
         for (let component of arguments) {
             if (Array.isArray(component)) {
@@ -473,7 +480,10 @@ class KDVisualContainerComponent extends KDVisualComponent {
 }
 
 
-
+/**
+ * Button class wrapper
+ * @extends {KDVisualComponent}
+ */
 class KDButton extends KDVisualComponent {
     constructor(properties) {
         super(properties, "input", "button");
@@ -485,7 +495,9 @@ function kdButton(properties) {
 }
 
 
-
+/**
+ * Hidden field class wrapper
+ */
 class KDHidden extends KDVisualComponent {
     constructor(properties) {
         super(properties, "input", "hidden");
@@ -497,10 +509,16 @@ function kdHidden(properties) {
 }
 
 
-
+/**
+ * Select form field wrapper
+ * @extends KDVisualComponent
+ */
 class KDSelector extends KDVisualComponent {
     constructor(properties) {
         super(properties, "select");
+        this.textField = "text"; //default name
+        this.valueField = "value"; //default name
+
     }
     /**
      * 
@@ -585,11 +603,19 @@ class KDSelector extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a Selector component
+ * @param {properties} properties 
+ * @returns itself.
+ */
 function kdSelector(properties) {
     return new KDSelector(properties);
 }
 
-
+/**
+ * Text field class wrapper
+ * @extends {KDVisualComponent}
+ */
 class KDText extends KDVisualComponent {
     constructor(properties) {
         super(properties, "input", "text");
@@ -600,7 +626,9 @@ function kdText(properties) {
     return new KDText(properties);
 }
 
-
+/**
+ * Radio field class wrapper
+ */
 class KDRadioButton extends KDVisualComponent {
     constructor(properties) {
         super(properties, "input", "radio");
@@ -741,6 +769,10 @@ function kdImage(properties) {
 }
 
 
+/**
+ * Visual container component wich is usefull to syncronize data with inner components.
+ * @extends {KDVisualContainerComponent}
+ */
 class KDLayer extends KDVisualContainerComponent {
     constructor(properties, htmlClass) {
         super(properties, "div");
@@ -1126,21 +1158,27 @@ function kdJoinFormData(target, source) {
 class KDFile extends KDObject {
     constructor() {
         super();
-        this.read = function (file, callback) {
-            var rawFile = new XMLHttpRequest();
-            rawFile.open("GET", file, true);
-            rawFile.onreadystatechange = function () {
-                if (rawFile.readyState === 4) {
-                    if (rawFile.status === 200 || rawFile.status == 0) {
-                        var allText = rawFile.responseText;
-                        callback(allText);
-                    }
+    }
+    /**
+     * Read a file locally
+     * @param {*} file name
+     * @param {*} callback a function with a unique parameter to pass data from file
+     */
+    read(file, callback) {
+        let rawFile = new XMLHttpRequest();
+        rawFile.open("GET", file, true);
+        rawFile.onreadystatechange = function () {
+            if (rawFile.readyState === 4) {
+                if (rawFile.status === 200 || rawFile.status == 0) {
+                    var allText = rawFile.responseText;
+                    callback(allText);
                 }
             }
-            rawFile.send(null);
         }
+        rawFile.send(null);
     }
 }
+
 
 var kdFile = new KDFile();
 
@@ -1205,7 +1243,8 @@ class KDMessage extends KDObject {
      * @returns splitted payloads words (tokens)
      */
     getTokens() {
-        return this.payload.match(KD_TOKENS);
+        // return this.payload.match(KD_TOKENS);
+        return this.payload.split(/[\t\x20]+/);
     }
 
     /**
@@ -1237,6 +1276,12 @@ class KDMessage extends KDObject {
      * @returns a token (word from payload, and delete it from payload object property)
      */
     reducePayload() {
+        let tokens = this.getTokens()
+        let r = tokens.shift();
+        this.payload = tokens.join(" ");
+        return r;
+
+        /*
         let n = this.payload.indexOf(" ");
         if (n > -1) {
             let t = this.payload.substr(0, n).trim();
@@ -1245,6 +1290,7 @@ class KDMessage extends KDObject {
         } else {
             return this.payload;
         }
+        */
     }
 }
 
@@ -1266,7 +1312,7 @@ function kdMessage(destination, payload, origin, producer, consumer) {
  * 
  * This class wrap a main routines like a system operating kernel. 
  * Has the responsability of send, read and proccess messages through differents internet nodes
- * wich support KD. Load KD applications, and connect those with a server(PHP kind server).
+ * wich support KD. Loads KD applications, and connect those with a server(PHP kind server).
  * It is a entry point too.
  * All html files wich are used to run KD applications must implements a KD kernel in this way:
  * &lt;code>var kdKernel = new KDKernel();&lt;/code>
@@ -1713,8 +1759,8 @@ class KDWindowDefaultTheme extends KDObject {
                     position: "absolute",
                     display: "inline-block",
                     border: "1px solid black",
-                    height: "40vh",
-                    width: "50vw",
+                    height: "60vh",
+                    width: "70vw",
                     padding: "0px",
                 },
                 head: {
@@ -1745,14 +1791,14 @@ class KDWindowDefaultTheme extends KDObject {
                         position: "inherit",
                         display: "inherit",
                         border: "inherit",
-                        height: "calc(100% - 80px)",
-                        width: "calc(100% - 8px)",
+                        height: "calc(100% - 88px)",
+                        width: "calc(100% - 16px)",
                         left: "-1px",
                         top: "40px",
                         backgroundColor: "white",
                         overflow: "scroll",
                         fontSize: "1em",
-                        padding: "4px",
+                        padding: "8px",
                         whiteSpace: "pre-wrap",
 
                     }
@@ -1832,7 +1878,11 @@ var kdWindowTerminalTheme = new KDWindowDefaultTheme(
     }
 );
 
-
+/**
+ * Convenience constructor for KDWindow class
+ * @param {KDWindowDefaultTheme} theme 
+ * @returns KDWindow intance
+ */
 function kdWindow(theme) {
     if (theme == undefined) {
         theme = kdWindowDefaultTheme;
@@ -2100,8 +2150,20 @@ class KDTerminalApp extends KDApplication {
             node.innerHTML = code;
             this.window.body.dom.insertBefore(node, this.prefix.dom);
             this.input.dom.focus();
+            this.window.body.dom.scrollTop = this.window.body.dom.scrollHeight;
         }
     }
+
+    appendImage(src) {
+        let im = document.createElement("img");
+        im.src = src;
+        this.window.body.dom.insertBefore(im, this.prefix.dom);
+        this.input.dom.focus();
+        this.window.body.dom.scrollTop = this.window.body.dom.scrollHeight;
+    }
+
+
+
 
     processKey(e) {
         let ter = e.target.terminal;
@@ -2111,11 +2173,24 @@ class KDTerminalApp extends KDApplication {
                 e.preventDefault();
                 let data = ter.input.getValue();
                 ter.appendText(data);
+
                 if (data.length > 0) {
-                    let tokens = Array.from(data.matchAll(KD_TOKENS));
-                    let dest = tokens[0][0];
-                    let m = kdMessage(dest, data.substr(dest.length).trim());
+
+                    //Split user input
+                    let tokens = data.split(/[\x20\t]+/);
+                    var dest = tokens[0];
+                    var payload = data.substring(dest.length).trim();
+
+                    //If terminal has owner take all input as payload.
+                    //First word of payload isnt't 'terminal'
+                    if (dest != ter.id &amp;&amp; ter.owner != undefined) {
+                        dest = ter.owner;
+                        payload = data;
+                    }
+
+                    let m = kdMessage(dest, payload);
                     ter.kernel.sendLocalMessage(m);
+
                     ter.input.setValue("");
                     ter.lastLines.push(data);
                     ter.lastLinesIndex = ter.lastLines.length - 1;
@@ -2155,26 +2230,32 @@ class KDTerminalApp extends KDApplication {
     }
 
     processMessage(message) {
+
         if (message.destination == this.id || message.destination == "!") {
             if (message.payload == undefined) {
                 this.run();
             } else {
                 let tokens = message.getTokens();
                 switch (tokens[0]) {
-                    /*
-                     case "take":
-                         if (tokens.length > 1) {
-                             let owner = tokens[1];
-                             if (this.kernel.constainsApplication(owner)) {
-                                 this.owner = tokens[1];
-                             }
-                         }
-                         break;
- 
-                     case "release":
-                         this.owner = "";
-                         break;
-                         */
+
+                    /* 
+                    When a message was send to terminal and its first parameter is take
+                    make this app the new terminal owner
+                    */
+                    case "take":
+                        if (tokens.length > 1) {
+                            let owner = tokens[1];
+                            if (this.kernel.constainsApplication(owner)) {
+                                this.owner = tokens[1];
+                                this.appendText("[" + this.owner + "]");
+                            }
+                        }
+                        break;
+
+                    case "release":
+                        this.owner = null;
+                        break;
+
 
                     case "show":
                         if (tokens[1] == "applications") {
@@ -2194,6 +2275,11 @@ class KDTerminalApp extends KDApplication {
                     case "setPrefix":
                         message.reducePayload();
                         this.prefix.setValue(message.payload + ">");
+                        break;
+
+                    case "image":
+                        this.appendImage(tokens[1]);
+                        break;
 
                     default:
                         this.appendText(message.payload, true);
@@ -2203,6 +2289,75 @@ class KDTerminalApp extends KDApplication {
         }
     }
 }
+
+class KDHackApp extends KDApplication {
+    constructor(kernel) {
+        super(kernel);
+        this.id = "hack";
+        this.idStage = 0;
+        this.stage = {};
+        this.userInput = undefined;
+        let thisApp = this;
+        kdFile.read("hack.js", function (code) { thisApp.stage = eval(code); });
+
+    }
+
+    show(t) {
+        let m = kdMessage("terminal", "print " + t)
+        this.kernel.sendLocalMessage(m);
+    }
+
+    showImage(src) {
+        let m = kdMessage("terminal", "image " + src)
+        this.kernel.sendLocalMessage(m);
+
+    }
+
+    next() {
+        this.idStage++;
+        this.runStage();
+    }
+
+    jump(id) {
+        this.idStage = id;
+        this.runStage();
+    }
+
+    wait(miliseconds) {
+        let thisApp = this;
+        window.setTimeout(function () { thisApp.next() }, miliseconds);
+    }
+
+    runStage() {
+        let stage = this.stage[this.idStage];
+        stage(this);
+    }
+
+    processMessage(message) {
+        if (message.payload == ".") {
+            this.runStage();
+        } else {
+
+            switch (message.payload) {
+                case "./next":
+                    this.next();
+                    break;
+                default:
+                    this.userInput = message.payload;
+                    this.next();
+                    break;
+
+            }
+
+        }
+    }
+
+
+
+
+}
+
+
 
 /** Main instance of KERNEL. Must be after defaults applications */
 var kdKernel = new KDKernel();
@@ -2215,6 +2370,8 @@ kdKernel
     .addApplication(KDEvalApp)
     .addApplication(KDSerialTimeApp)
     .addApplication(KDLoginApp)
+    .addApplication(KDHackApp)
+
     .initialize();</code></pre>
         </article>
     </section>
@@ -2225,13 +2382,13 @@ kdKernel
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="KDAlertApp.html">KDAlertApp</a></li><li><a href="KDApplication.html">KDApplication</a></li><li><a href="KDBase64.html">KDBase64</a></li><li><a href="KDCheckbox.html">KDCheckbox</a></li><li><a href="KDComponent.html">KDComponent</a></li><li><a href="KDDictionary.html">KDDictionary</a></li><li><a href="KDDropFileZone.html">KDDropFileZone</a></li><li><a href="KDEvalApp.html">KDEvalApp</a></li><li><a href="KDFile.html">KDFile</a></li><li><a href="KDKernel.html">KDKernel</a></li><li><a href="KDMessage.html">KDMessage</a></li><li><a href="KDObject.html">KDObject</a></li><li><a href="KDServerApp.html">KDServerApp</a></li><li><a href="KDServerBridge.html">KDServerBridge</a></li><li><a href="KDStyles.html">KDStyles</a></li><li><a href="KDTerminalApp.html">KDTerminalApp</a></li><li><a href="KDUser.html">KDUser</a></li><li><a href="KDVisualComponent.html">KDVisualComponent</a></li><li><a href="KDVisualContainerComponent.html">KDVisualContainerComponent</a></li><li><a href="KDWindow.html">KDWindow</a></li><li><a href="KDWindowManager.html">KDWindowManager</a></li></ul><h3>Global</h3><ul><li><a href="global.html#kdKernel">kdKernel</a></li><li><a href="global.html#kdMessage">kdMessage</a></li><li><a href="global.html#kdWindowManagerInstance">kdWindowManagerInstance</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="KDAlertApp.html">KDAlertApp</a></li><li><a href="KDApplication.html">KDApplication</a></li><li><a href="KDBase64.html">KDBase64</a></li><li><a href="KDButton.html">KDButton</a></li><li><a href="KDCheckbox.html">KDCheckbox</a></li><li><a href="KDDictionary.html">KDDictionary</a></li><li><a href="KDDropFileZone.html">KDDropFileZone</a></li><li><a href="KDEvalApp.html">KDEvalApp</a></li><li><a href="KDFile.html">KDFile</a></li><li><a href="KDHidden.html">KDHidden</a></li><li><a href="KDKernel.html">KDKernel</a></li><li><a href="KDLayer.html">KDLayer</a></li><li><a href="KDMessage.html">KDMessage</a></li><li><a href="KDRadioButton.html">KDRadioButton</a></li><li><a href="KDSelector.html">KDSelector</a></li><li><a href="KDServerApp.html">KDServerApp</a></li><li><a href="KDServerBridge.html">KDServerBridge</a></li><li><a href="KDStyles.html">KDStyles</a></li><li><a href="KDTerminalApp.html">KDTerminalApp</a></li><li><a href="KDText.html">KDText</a></li><li><a href="KDUser.html">KDUser</a></li><li><a href="KDVisualContainerComponent.html">KDVisualContainerComponent</a></li><li><a href="KDWindow.html">KDWindow</a></li><li><a href="KDWindowManager.html">KDWindowManager</a></li></ul><h3>Interfaces</h3><ul><li><a href="KDComponent.html">KDComponent</a></li><li><a href="KDObject.html">KDObject</a></li><li><a href="KDVisualComponent.html">KDVisualComponent</a></li></ul><h3>Global</h3><ul><li><a href="global.html#kdKernel">kdKernel</a></li><li><a href="global.html#kdMessage">kdMessage</a></li><li><a href="global.html#kdSelector">kdSelector</a></li><li><a href="global.html#kdWindow">kdWindow</a></li><li><a href="global.html#kdWindowManagerInstance">kdWindowManagerInstance</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Mon Mar 07 2022 16:40:45 GMT-0400 (hora de Venezuela)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sun May 08 2022 21:38:18 GMT-0400 (Venezuela Time)
 </footer>
 
 <script> prettyPrint(); </script>

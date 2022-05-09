@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>TetraMapa</title>
+
+
+</head>
+
+<body>
+    <script src="../KD.js"></script>
+    <script>
+
+        var opciones = [
+            { "text": "1", "value": 1 },
+            { "text": "2", "value": 2 },
+            { "text": "3", "value": 3 },
+            { "text": "4", "value": 4 }
+        ]
+
+        var datos = [
+            {
+                "p1": "Decisivo",
+                "p2": "Ordenado",
+                "p3": "Considerado",
+                "p4": "Espontáneo"
+            },
+
+            {
+                "p1": "Resultados",
+                "p2": "Sistemas",
+                "p3": "Apoyo",
+                "p4": "Inspiración"
+            },
+            {
+                "p1": "Destino",
+                "p2": "Horario",
+                "p3": "Viaje",
+                "p4": "Sueño"
+            },
+            {
+                "p1": "Abrupto",
+                "p2": "Crítico",
+                "p3": "Indeciso",
+                "p4": "Fácil de distraer"
+            },
+            {
+                "p1": "Audaz",
+                "p2": "Preciso",
+                "p3": "Paciente",
+                "p4": "Entusiasta"
+            },
+            {
+                "p1": "Hechos",
+                "p2": "Lógica",
+                "p3": "Sentimientos",
+                "p4": "Posibilidades"
+            },
+            {
+                "p1": "Agresivo",
+                "p2": "Meticuloso",
+                "p3": "Cariñoso",
+                "p4": "Sociable",
+            },
+            {
+                "p1": "Metas",
+                "p2": "Calidad",
+                "p3": "Acuerdos",
+                "p4": "Ideas"
+            },
+            {
+                "p1": "Competitivo",
+                "p2": "Analítico",
+                "p3": "Leal",
+                "p4": "Optimista"
+            }
+        ]
+
+        var indice = 0;
+
+        function siguiente() {
+
+            var v1 = parseInt(s1.getValue())
+            var v2 = parseInt(s2.getValue())
+            var v3 = parseInt(s3.getValue())
+            var v4 = parseInt(s4.getValue())
+            var t = Math.pow(2, v1 - 1) + Math.pow(2, v2 - 1) + Math.pow(2, v3 - 1) + Math.pow(2, v4 - 1);
+            datos[indice].r1 = v1;
+            datos[indice].r2 = v2;
+            datos[indice].r3 = v3;
+            datos[indice].r4 = v4;
+
+
+            if (t != 15) {
+                alert("Los valores asignados deben ser diferentes unos de otros. No puede haber por ejemplo dos palabras con la misma puntuación");
+            } else {
+                indice++;
+                if (indice < 8) {
+                    formulario.setValue(datos[indice])
+                    s1.setValue(1);
+                    s2.setValue(1);
+                    s3.setValue(1);
+                    s4.setValue(1);
+                } else {
+                    //Llegamos al final, sumemos los resultados
+                    var r1 = 0, r2 = 0, r3 = 0, r4 = 0;
+                    for (var i = 0; i < 8; i++) {
+                        r1 += datos[i].r1;
+                        r2 += datos[i].r2;
+                        r3 += datos[i].r3;
+                        r4 += datos[i].r4;
+
+                    }
+
+                    i1.setValue("A=" + r1);
+                    i2.setValue("B=" + r2);
+                    i3.setValue("C=" + r3);
+                    i4.setValue("D=" + r4);
+                }
+            }
+        }
+
+        kdWindow(kdWindowDefaultTheme)
+            .wrapOnBody(
+                kdLayer()
+                    .storeIn("formulario")
+                    .wrap(
+                        kdLabel()
+                            .setName("p1"),
+                        kdSelector()
+                            .storeIn("s1")
+                            .setData(opciones)
+                            .fill()
+                        ,
+
+                        kdLabel()
+                            .setName("p2"),
+                        kdSelector()
+                            .storeIn("s2")
+                            .setData(opciones)
+                            .fill()
+                        ,
+                        kdLabel()
+                            .setName("p3"),
+                        kdSelector()
+                            .storeIn("s3")
+                            .setData(opciones)
+                            .fill()
+                        ,
+                        kdLabel()
+                            .setName("p4"),
+                        kdSelector()
+                            .storeIn("s4")
+                            .setData(opciones)
+                            .fill()
+                        ,
+                    )
+                    .setValue(datos[0])
+                ,
+
+                kdButton()
+                    .setValue("Siguiente")
+                    .addEvent("click", siguiente),
+                kdLayer()
+                    .wrap(
+                        kdLabel()
+                            .storeIn("i1"),
+                        kdLabel()
+                            .storeIn("i2"),
+                        kdLabel()
+                            .storeIn("i3"),
+                        kdLabel()
+                            .storeIn("i4"),
+
+                    )
+            )
+            .publish();
+
+
+
+    </script>
+</body>
+
+</html>

@@ -2,10 +2,11 @@
 
 var kdId = 0;
 const KD_ALL = ".*";
-const KD_TOKENS = /[\w\@\d\.\*]+/g;
+const KD_TOKENS = /[A-zÀ-ú\@\d\.\*\\]+/g;
 
 /**
  * Master object of KD Api
+ * @interface
  */
 class KDObject {
     constructor(properties) {
@@ -131,6 +132,7 @@ class KDObject {
 /**
  * Base class for KD components
  *  @extends KDObject
+ * @interface
  */
 class KDComponent extends KDObject {
     constructor(properties, htmlClass, htmlType) {
@@ -314,6 +316,7 @@ class KDComponent extends KDObject {
 /**
  * Base class of visual components.
  *  @extends KDComponent
+ * @interface
  */
 class KDVisualComponent extends KDComponent {
     constructor(properties, htmlClass, htmlType) {
@@ -413,6 +416,10 @@ class KDVisualContainerComponent extends KDVisualComponent {
         if (this.components == undefined) this.components = [];
     }
 
+    /**
+     * Wrap a components array. Could be used convenience methods in order to create components.
+     * @returns itself.
+     */
     wrap() {
         for (let component of arguments) {
             if (Array.isArray(component)) {
@@ -445,7 +452,10 @@ class KDVisualContainerComponent extends KDVisualComponent {
 }
 
 
-
+/**
+ * Button class wrapper
+ * @extends {KDVisualComponent}
+ */
 class KDButton extends KDVisualComponent {
     constructor(properties) {
         super(properties, "input", "button");
@@ -457,7 +467,9 @@ function kdButton(properties) {
 }
 
 
-
+/**
+ * Hidden field class wrapper
+ */
 class KDHidden extends KDVisualComponent {
     constructor(properties) {
         super(properties, "input", "hidden");
@@ -469,10 +481,16 @@ function kdHidden(properties) {
 }
 
 
-
+/**
+ * Select form field wrapper
+ * @extends KDVisualComponent
+ */
 class KDSelector extends KDVisualComponent {
     constructor(properties) {
         super(properties, "select");
+        this.textField = "text"; //default name
+        this.valueField = "value"; //default name
+
     }
     /**
      * 
@@ -557,11 +575,19 @@ class KDSelector extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a Selector component
+ * @param {properties} properties 
+ * @returns itself.
+ */
 function kdSelector(properties) {
     return new KDSelector(properties);
 }
 
-
+/**
+ * Text field class wrapper
+ * @extends {KDVisualComponent}
+ */
 class KDText extends KDVisualComponent {
     constructor(properties) {
         super(properties, "input", "text");
@@ -572,7 +598,9 @@ function kdText(properties) {
     return new KDText(properties);
 }
 
-
+/**
+ * Radio field class wrapper
+ */
 class KDRadioButton extends KDVisualComponent {
     constructor(properties) {
         super(properties, "input", "radio");
@@ -713,6 +741,10 @@ function kdImage(properties) {
 }
 
 
+/**
+ * Visual container component wich is usefull to syncronize data with inner components.
+ * @extends {KDVisualContainerComponent}
+ */
 class KDLayer extends KDVisualContainerComponent {
     constructor(properties, htmlClass) {
         super(properties, "div");
@@ -1098,21 +1130,27 @@ function kdJoinFormData(target, source) {
 class KDFile extends KDObject {
     constructor() {
         super();
-        this.read = function (file, callback) {
-            var rawFile = new XMLHttpRequest();
-            rawFile.open("GET", file, true);
-            rawFile.onreadystatechange = function () {
-                if (rawFile.readyState === 4) {
-                    if (rawFile.status === 200 || rawFile.status == 0) {
-                        var allText = rawFile.responseText;
-                        callback(allText);
-                    }
+    }
+    /**
+     * Read a file locally
+     * @param {*} file name
+     * @param {*} callback a function with a unique parameter to pass data from file
+     */
+    read(file, callback) {
+        let rawFile = new XMLHttpRequest();
+        rawFile.open("GET", file, true);
+        rawFile.onreadystatechange = function () {
+            if (rawFile.readyState === 4) {
+                if (rawFile.status === 200 || rawFile.status == 0) {
+                    var allText = rawFile.responseText;
+                    callback(allText);
                 }
             }
-            rawFile.send(null);
         }
+        rawFile.send(null);
     }
 }
+
 
 var kdFile = new KDFile();
 
@@ -1177,7 +1215,8 @@ class KDMessage extends KDObject {
      * @returns splitted payloads words (tokens)
      */
     getTokens() {
-        return this.payload.match(KD_TOKENS);
+        // return this.payload.match(KD_TOKENS);
+        return this.payload.split(/[\t\x20]+/);
     }
 
     /**
@@ -1209,6 +1248,12 @@ class KDMessage extends KDObject {
      * @returns a token (word from payload, and delete it from payload object property)
      */
     reducePayload() {
+        let tokens = this.getTokens()
+        let r = tokens.shift();
+        this.payload = tokens.join(" ");
+        return r;
+
+        /*
         let n = this.payload.indexOf(" ");
         if (n > -1) {
             let t = this.payload.substr(0, n).trim();
@@ -1217,6 +1262,7 @@ class KDMessage extends KDObject {
         } else {
             return this.payload;
         }
+        */
     }
 }
 
@@ -1804,7 +1850,11 @@ var kdWindowTerminalTheme = new KDWindowDefaultTheme(
     }
 );
 
-
+/**
+ * Convenience constructor for KDWindow class
+ * @param {KDWindowDefaultTheme} theme 
+ * @returns KDWindow intance
+ */
 function kdWindow(theme) {
     if (theme == undefined) {
         theme = kdWindowDefaultTheme;
@@ -2076,6 +2126,17 @@ class KDTerminalApp extends KDApplication {
         }
     }
 
+    appendImage(src) {
+        let im = document.createElement("img");
+        im.src = src;
+        this.window.body.dom.insertBefore(im, this.prefix.dom);
+        this.input.dom.focus();
+        this.window.body.dom.scrollTop = this.window.body.dom.scrollHeight;
+    }
+
+
+
+
     processKey(e) {
         let ter = e.target.terminal;
 
@@ -2084,23 +2145,24 @@ class KDTerminalApp extends KDApplication {
                 e.preventDefault();
                 let data = ter.input.getValue();
                 ter.appendText(data);
+
                 if (data.length > 0) {
 
-                    let tokens = Array.from(data.matchAll(KD_TOKENS));
-                    let dest = tokens[0][0];
+                    //Split user input
+                    let tokens = data.split(/[\x20\t]+/);
+                    var dest = tokens[0];
+                    var payload = data.substring(dest.length).trim();
 
-                    if (dest == ter.id && data.substr(dest.length).trim() == "release") {
-                        ter.owner = undefined;
+                    //If terminal has owner take all input as payload.
+                    //First word of payload isnt't 'terminal'
+                    if (dest != ter.id && ter.owner != undefined) {
+                        dest = ter.owner;
+                        payload = data;
                     }
 
-                    if (ter.owner == undefined) {
-                        let m = kdMessage(dest, data.substr(dest.length).trim());
-                        ter.kernel.sendLocalMessage(m);
-                    } else {
-                        let dest = ter.owner;
-                        let m = kdMessage(dest, data.trim());
-                        ter.kernel.sendLocalMessage(m);
-                    }
+                    let m = kdMessage(dest, payload);
+                    ter.kernel.sendLocalMessage(m);
+
                     ter.input.setValue("");
                     ter.lastLines.push(data);
                     ter.lastLinesIndex = ter.lastLines.length - 1;
@@ -2185,6 +2247,11 @@ class KDTerminalApp extends KDApplication {
                     case "setPrefix":
                         message.reducePayload();
                         this.prefix.setValue(message.payload + ">");
+                        break;
+
+                    case "image":
+                        this.appendImage(tokens[1]);
+                        break;
 
                     default:
                         this.appendText(message.payload, true);
@@ -2195,250 +2262,71 @@ class KDTerminalApp extends KDApplication {
     }
 }
 
-class KDHack extends KDApplication {
+class KDHackApp extends KDApplication {
     constructor(kernel) {
         super(kernel);
         this.id = "hack";
         this.idStage = 0;
-        this.mode = undefined;
-        this.currentAsk = [];
-        this.curentInput = undefined;
-        this.commands = [];
-
-        /**
-         * text: just show a text
-         * time: milliseconds to next stage
-         * id: identifier 
-         * command: command simulator
-         * exe: call a function
-         */
-
-
-        this.stage = [
-            {
-                text: "Anónimo: Hola, soy Anónimo. ¿Me ayudas a detener a los malvados? \n     /\ \n     /  \   _ __   ___  _ __  _   _ _ __ ___   ___  _   _ ____ \n    / /\ \ | '_ \ / _ \| '_ \| | | | '_ ` _ \ / _ \| | | / __| \n / ____ \| | | | (_) | | | | |_| | | | | | | (_) | |_| \__ \ \n /_/    \_\_| |_|\___/|_| |_|\__, |_| |_| |_|\___/ \__,_|___/ \n                               __/ |\n                             |___/",
-                time: 2000,
-                id: 1,
-                
-            },
-            {
-                text: "Anónimo: Aguarda mis instrucciones...",
-                time: 1000,
-                id: 2
-
-            },
-            {
-                text: "Anónimo: Si deseas continuar debes tomar el control de este terminal",
-                time: 1000,
-                id: 3
-
-            },
-            {
-                text: "Anónimo: para lograr eso escribe el siguiente comando:<code>terminal take hack</code> y pulsa ENTER. Luego escribe <code>stage++</code> para avanzar a la siguiente instrucción.",
-                id: 4
-
-            },
-            {
-                text: "Anónimo: Bienvenido de nuevo. Ahora todo será más sencillo",
-                time: 2000,
-                id: 5
-
-            },
-            {
-                text: "Anónimo: Necesito que entiendas que esto es peligroso.",
-                time: 1000,
-                id: 6
-
-            },
-            {
-                text: "Anónimo: Mucha gente depende de ti ahora. ¿Lo entiendes?",
-                time: 1000,
-                id: 7
-
-            },
-            {
-                text: "Anónimo: Escribe <code>si</code> o <code>no</code> cuando te pregunte algo",
-                time: 1000,
-                id: 8
-
-            },
-
-            {
-                ask: [{ text: "si", id: 11 }, { text: "no", id: 10 }],
-                id: 9
-            },
-
-            {
-                id: 10,
-                text: "Anónimo: ¡Látima! ¡Pensé que podríamos lograrlo! Chaoooo.",
-
-            },
-
-
-            {
-                id: 11,
-                text: "Anónimo: ¡Lo sabía! Eres muy valiente",
-                time: 1000
-            },
-
-            {
-
-                text: "Anónimo: Ahora tenemos que entrar al computador central para ver qué esconden",
-                time: 1000,
-                id: 12
-            },
-
-            {
-
-                text: "Anónimo: el comando <code> net main</code> sirve para entrar en la red central. Quizá te pidan un nombre de usuario y contraseña",
-                id: 13,
-                command: { text: "net main", jumpToId: 14 }
-            },
-
-            {
-
-                text: "Conectando...",
-                time: 500,
-                id: 14
-
-            },
-            {
-
-                text: "Puerto 2345/45kb",
-                time: 500,
-                id: 15
-
-            },
-            {
-
-                text: "**** NETWORK ACCESS POINT ****",
-                time: 500,
-                id: 16
-
-            },
-            {
-
-                id: 17,
-                input: "Indique su nombre de usuario ahora:",
-
-            }
-
-        ];
-
-
+        this.stage = {};
+        this.userInput = undefined;
+        let thisApp = this;
+        kdFile.read("hack.js", function (code) { thisApp.stage = eval(code); });
 
     }
 
+    show(t) {
+        let m = kdMessage("terminal", "print " + t)
+        this.kernel.sendLocalMessage(m);
+    }
+
+    showImage(src) {
+        let m = kdMessage("terminal", "image " + src)
+        this.kernel.sendLocalMessage(m);
+
+    }
+
+    next() {
+        this.idStage++;
+        this.runStage();
+    }
+
+    jump(id) {
+        this.idStage = id;
+        this.runStage();
+    }
+
+    wait(miliseconds) {
+        let thisApp = this;
+        window.setTimeout(function () { thisApp.next() }, miliseconds);
+    }
 
     runStage() {
-
         let stage = this.stage[this.idStage];
-        let thisApp = this;
-
-        if (stage.text != undefined) {
-            let m = kdMessage("terminal", "print " + stage.text)
-            this.kernel.sendLocalMessage(m);
-        }
-
-        if (stage.time != undefined) {
-            window.setTimeout(function () { thisApp.idStage++; thisApp.runStage() }, stage.time)
-        }
-
-        if (stage.ask != undefined) {
-            this.mode = "ask";
-            this.currentAsk = stage.ask;
-            var opts = "";
-            for (let i = 0; i < this.currentAsk.length; i++) {
-                opts += "<code>" + stage.ask[i].text + "</code>/";
-
-            }
-            opts = opts.substring(0, opts.length - 1);
-
-            var m = kdMessage("terminal", "print <label>opciones:</label> " + opts)
-            this.kernel.sendLocalMessage(m);
-
-            m = kdMessage("ask")
-            this.kernel.sendLocalMessage(m);
-
-        }
-
-        if (stage.input != undefined) {
-            this.mode = "input";
-            var m = kdMessage("hack", stage.input)
-            this.kernel.sendLocalMessage(m);
-        }
-
-        if (stage.command != undefined) {
-            this.commands.push(stage.command);
-            let s = JSON.stringify(stage.command);
-            var m = kdMessage("hack", s);
-            this.kernel.sendLocalMessage(m);
-        }
-
-        if (stage.exe != undefined) {
-            stage.exe();
-        }
-
+        stage(this);
     }
-
-    runStageById(id) {
-        for (let i = 0; i < this.stage.length; i++) {
-            if (this.stage[i].id != undefined) {
-                if (this.stage[i].id == id) {
-                    this.idStage = i;
-                    this.runStage();
-
-                }
-            }
-
-        }
-    }
-
 
     processMessage(message) {
+        if (message.payload == ".") {
+            this.runStage();
+        } else {
 
-        if (this.mode == undefined) {
-            let tokens = message.payload.split(" ");
-            switch (tokens[0]) {
-                case ".":
-                    this.runStage();
+            switch (message.payload) {
+                case "./next":
+                    this.next();
                     break;
-
-                case "stage++":
-                    this.idStage++;
-                    this.runStage();
-                    break;
-
                 default:
-                    for (let i = 0; i < this.commands.length; i++) {
-                        if (this.commands[i].text == message.payload) {
-                            if (this.commands[i].jumpToId != undefined) {
-                                this.runStageById(this.commands[i].jumpToId);
-                            }
-                        }
-                    }
+                    this.userInput = message.payload;
+                    this.next();
                     break;
 
             }
 
-        } else if (this.mode == "ask") {
-            //Si hay alguna pregunta activa
-
-            for (let i = 0; i < this.currentAsk.length; i++) {
-                if (message.payload == this.currentAsk[i].text) {
-                    this.runStageById(this.currentAsk[i].id);
-                }
-            }
-            this.currentAsk = undefined;
-            this.mode = undefined;
-
-
-        } else if (this.mode == "input") {
-            this.curentInput = window.prompt(message.payload)
-            this.mode = undefined;
         }
-
     }
+
+
+
+
 }
 
 
@@ -2454,6 +2342,6 @@ kdKernel
     .addApplication(KDEvalApp)
     .addApplication(KDSerialTimeApp)
     .addApplication(KDLoginApp)
-    .addApplication(KDHack)
+    .addApplication(KDHackApp)
 
     .initialize();
