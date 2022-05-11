@@ -697,6 +697,10 @@ function kdLabel(properties) {
     return new KDLabel(properties);
 }
 
+/**
+ * Span HTML tag wrapper
+ * @extends KDVisualContainerComponent
+ */
 class KDSpan extends KDVisualContainerComponent {
     constructor(properties) {
         super(properties, "span");
@@ -715,6 +719,10 @@ class KDSpan extends KDVisualContainerComponent {
         return this.dom.innerHTML;
     }
 
+}
+
+function kdSpan(properties) {
+    return new KDSpan(properties);
 }
 
 class KDImage extends KDVisualComponent {
