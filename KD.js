@@ -5,8 +5,9 @@ const KD_ALL = ".*";
 const KD_TOKENS = /[A-zÀ-ú\@\d\.\*\\]+/g;
 
 /**
- * Master object of KD Api
- * @interface
+ * Master object of KD API.
+ * @description This class is the root class of this API. All descendant
+ * class wich implement must have and ID.
  */
 class KDObject {
     constructor(properties) {
@@ -42,7 +43,7 @@ class KDObject {
 
     /**
      * Save this object on a global property with this name.
-     * @param {string} name 
+     * @param {String} name 
      * @returns self object
      */
     storeIn(name) {
@@ -62,7 +63,7 @@ class KDObject {
     }
 
     /**
-     * @returns return class name
+     * @returns Return class name
      */
     className() {
         return this.constructor.name;
@@ -70,7 +71,7 @@ class KDObject {
 
     /**
      * 
-     * @returns return a clone of this object.
+     * @returns Return a clone of this object.
      */
     clone() {
         return new this.constructor(this.properties);
@@ -132,7 +133,9 @@ class KDObject {
 /**
  * Base class for KD components
  * @extends KDObject
- * @interface
+ * @description This class is use to configure components which
+ * could be visible or not. Do not implement this class diretly,
+ * instead make childs from this base class.
  */
 class KDComponent extends KDObject {
     constructor(properties, htmlClass, htmlType) {
@@ -209,7 +212,7 @@ class KDComponent extends KDObject {
 
     /**
      * Set handler wich will be called before set value
-     * @param {*} handler 
+     * @param {Function} handler function to be called.
      * @returns self reference
      */
     setDoBeforeSetValue(handler) {
@@ -239,7 +242,7 @@ class KDComponent extends KDObject {
 
     /**
      * Clone this object
-     * @returns a clone of this object
+     * @returns A clone of this object
      */
     clone() {
         let o = super.clone();
@@ -276,8 +279,11 @@ class KDComponent extends KDObject {
     }
 
     /**
-     * Attach events to new objects
-     * @param {*} eventHandlers 
+     * Attach events to new objects.
+     * @param {*} eventHandlers Is a object with two properties: type and handler.
+     * The <b>type</b> property must is a String object like "click" or "mouseover".
+     * The <b>handler</b> property must is a function wich will be called when event fires.
+     * 
      * @returns self reference
      */
     attachEvents(eventHandlers) {
@@ -316,7 +322,6 @@ class KDComponent extends KDObject {
 /**
  * Base class of visual components.
  *  @extends KDComponent
- * @interface
  */
 class KDVisualComponent extends KDComponent {
     constructor(properties, htmlClass, htmlType) {
@@ -607,6 +612,11 @@ class KDText extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a text HTML element.
+ * @param {*} properties 
+ * @return itself instance
+ */
 function kdText(properties) {
     return new KDText(properties);
 }
@@ -629,6 +639,11 @@ class KDRadioButton extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a radio button HTML element.
+ * @param {*} properties 
+ * @return itself instance
+ */
 function kdRadioButton(properties) {
     return new KDRadioButton(properties);
 }
@@ -653,11 +668,20 @@ class KDCheckbox extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a checkbox HTML element.
+ * @param {*} properties 
+ * @return itself instance
+ */
 function kdCheckbox(properties) {
     return new KDCheckbox(properties);
 }
 
 
+/**
+ * @extends {KDVisualComponent}
+ * @description Class used for wrap a script and execute it.
+ */
 class KDScript extends KDVisualComponent {
     constructor(properties) {
         super(properties, "script");
@@ -924,13 +948,13 @@ class KDDropFileZone extends KDVisualContainerComponent {
 
     /**
      * 
-     * @param {*} url 
-     * @param {*} data Must be a KDDictionary
-     * @param {*} progress_callback 
-     * @param {*} success_callback 
-     * @param {*} error_callback 
-     * @param {*} method 
-     * @param {*} mimeType 
+     * @param {String} url 
+     * @param {KDDictionary} data Must be a KDDictionary
+     * @param {Function} progress_callback 
+     * @param {Function} success_callback 
+     * @param {Function} error_callback 
+     * @param {String} method Could be "post" or "get" (and others methods too.)
+     * @param {String} mimeType Like "text/css".
      */
     active = function (url, data, progress_callback, success_callback, error_callback, method, mimeType) {
         if (progress_callback == undefined) progress_callback = function (progress, quantity) { }
@@ -2087,7 +2111,7 @@ class KDHashApp extends KDApplication {
 }
 
 /**
- * Usefull terminal likes bash style. Create a {@link KDWindow} and publish it.
+ * Usefull terminal likes bash style.
  * All commands are proccessed after ENTER KEY are press.
  * <br/>In order to send a {@link KDMessage} (local or remote) use this syntax: <b>destination</b> <i>payload</i>.
  * <p>See {@link KDKernel} to get information about how KERNEL proccess local messages.</p>

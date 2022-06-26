@@ -33,8 +33,9 @@ const KD_ALL = ".*";
 const KD_TOKENS = /[A-zÀ-ú\@\d\.\*\\]+/g;
 
 /**
- * Master object of KD Api
- * @interface
+ * Master object of KD API.
+ * @description This class is the root class of this API. All descendant
+ * class wich implement must have and ID.
  */
 class KDObject {
     constructor(properties) {
@@ -70,7 +71,7 @@ class KDObject {
 
     /**
      * Save this object on a global property with this name.
-     * @param {string} name 
+     * @param {String} name 
      * @returns self object
      */
     storeIn(name) {
@@ -90,7 +91,7 @@ class KDObject {
     }
 
     /**
-     * @returns return class name
+     * @returns Return class name
      */
     className() {
         return this.constructor.name;
@@ -98,7 +99,7 @@ class KDObject {
 
     /**
      * 
-     * @returns return a clone of this object.
+     * @returns Return a clone of this object.
      */
     clone() {
         return new this.constructor(this.properties);
@@ -160,7 +161,9 @@ class KDObject {
 /**
  * Base class for KD components
  * @extends KDObject
- * @interface
+ * @description This class is use to configure components which
+ * could be visible or not. Do not implement this class diretly,
+ * instead make childs from this base class.
  */
 class KDComponent extends KDObject {
     constructor(properties, htmlClass, htmlType) {
@@ -237,7 +240,7 @@ class KDComponent extends KDObject {
 
     /**
      * Set handler wich will be called before set value
-     * @param {*} handler 
+     * @param {Function} handler function to be called.
      * @returns self reference
      */
     setDoBeforeSetValue(handler) {
@@ -267,7 +270,7 @@ class KDComponent extends KDObject {
 
     /**
      * Clone this object
-     * @returns a clone of this object
+     * @returns A clone of this object
      */
     clone() {
         let o = super.clone();
@@ -304,8 +307,11 @@ class KDComponent extends KDObject {
     }
 
     /**
-     * Attach events to new objects
-     * @param {*} eventHandlers 
+     * Attach events to new objects.
+     * @param {*} eventHandlers Is a object with two properties: type and handler.
+     * The &lt;b>type&lt;/b> property must is a String object like "click" or "mouseover".
+     * The &lt;b>handler&lt;/b> property must is a function wich will be called when event fires.
+     * 
      * @returns self reference
      */
     attachEvents(eventHandlers) {
@@ -344,7 +350,6 @@ class KDComponent extends KDObject {
 /**
  * Base class of visual components.
  *  @extends KDComponent
- * @interface
  */
 class KDVisualComponent extends KDComponent {
     constructor(properties, htmlClass, htmlType) {
@@ -635,6 +640,11 @@ class KDText extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a text HTML element.
+ * @param {*} properties 
+ * @return itself instance
+ */
 function kdText(properties) {
     return new KDText(properties);
 }
@@ -657,6 +667,11 @@ class KDRadioButton extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a radio button HTML element.
+ * @param {*} properties 
+ * @return itself instance
+ */
 function kdRadioButton(properties) {
     return new KDRadioButton(properties);
 }
@@ -681,11 +696,20 @@ class KDCheckbox extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a checkbox HTML element.
+ * @param {*} properties 
+ * @return itself instance
+ */
 function kdCheckbox(properties) {
     return new KDCheckbox(properties);
 }
 
 
+/**
+ * @extends {KDVisualComponent}
+ * @description Class used for wrap a script and execute it.
+ */
 class KDScript extends KDVisualComponent {
     constructor(properties) {
         super(properties, "script");
@@ -952,13 +976,13 @@ class KDDropFileZone extends KDVisualContainerComponent {
 
     /**
      * 
-     * @param {*} url 
-     * @param {*} data Must be a KDDictionary
-     * @param {*} progress_callback 
-     * @param {*} success_callback 
-     * @param {*} error_callback 
-     * @param {*} method 
-     * @param {*} mimeType 
+     * @param {String} url 
+     * @param {KDDictionary} data Must be a KDDictionary
+     * @param {Function} progress_callback 
+     * @param {Function} success_callback 
+     * @param {Function} error_callback 
+     * @param {String} method Could be "post" or "get" (and others methods too.)
+     * @param {String} mimeType Like "text/css".
      */
     active = function (url, data, progress_callback, success_callback, error_callback, method, mimeType) {
         if (progress_callback == undefined) progress_callback = function (progress, quantity) { }
@@ -2403,13 +2427,13 @@ kdKernel
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="KDAlertApp.html">KDAlertApp</a></li><li><a href="KDApplication.html">KDApplication</a></li><li><a href="KDBase64.html">KDBase64</a></li><li><a href="KDButton.html">KDButton</a></li><li><a href="KDCheckbox.html">KDCheckbox</a></li><li><a href="KDDictionary.html">KDDictionary</a></li><li><a href="KDDropFileZone.html">KDDropFileZone</a></li><li><a href="KDEvalApp.html">KDEvalApp</a></li><li><a href="KDFile.html">KDFile</a></li><li><a href="KDHidden.html">KDHidden</a></li><li><a href="KDKernel.html">KDKernel</a></li><li><a href="KDLayer.html">KDLayer</a></li><li><a href="KDMessage.html">KDMessage</a></li><li><a href="KDRadioButton.html">KDRadioButton</a></li><li><a href="KDSelector.html">KDSelector</a></li><li><a href="KDServerApp.html">KDServerApp</a></li><li><a href="KDServerBridge.html">KDServerBridge</a></li><li><a href="KDSpan.html">KDSpan</a></li><li><a href="KDStyles.html">KDStyles</a></li><li><a href="KDTerminalApp.html">KDTerminalApp</a></li><li><a href="KDText.html">KDText</a></li><li><a href="KDUser.html">KDUser</a></li><li><a href="KDVisualContainerComponent.html">KDVisualContainerComponent</a></li><li><a href="KDWindow.html">KDWindow</a></li><li><a href="KDWindowManager.html">KDWindowManager</a></li></ul><h3>Interfaces</h3><ul><li><a href="KDComponent.html">KDComponent</a></li><li><a href="KDObject.html">KDObject</a></li><li><a href="KDVisualComponent.html">KDVisualComponent</a></li></ul><h3>Global</h3><ul><li><a href="global.html#kdButton">kdButton</a></li><li><a href="global.html#kdHidden">kdHidden</a></li><li><a href="global.html#kdKernel">kdKernel</a></li><li><a href="global.html#kdMessage">kdMessage</a></li><li><a href="global.html#kdSelector">kdSelector</a></li><li><a href="global.html#kdWindow">kdWindow</a></li><li><a href="global.html#kdWindowManagerInstance">kdWindowManagerInstance</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="KDAlertApp.html">KDAlertApp</a></li><li><a href="KDApplication.html">KDApplication</a></li><li><a href="KDBase64.html">KDBase64</a></li><li><a href="KDButton.html">KDButton</a></li><li><a href="KDCheckbox.html">KDCheckbox</a></li><li><a href="KDComponent.html">KDComponent</a></li><li><a href="KDDictionary.html">KDDictionary</a></li><li><a href="KDDropFileZone.html">KDDropFileZone</a></li><li><a href="KDEvalApp.html">KDEvalApp</a></li><li><a href="KDFile.html">KDFile</a></li><li><a href="KDHidden.html">KDHidden</a></li><li><a href="KDKernel.html">KDKernel</a></li><li><a href="KDLayer.html">KDLayer</a></li><li><a href="KDMessage.html">KDMessage</a></li><li><a href="KDObject.html">KDObject</a></li><li><a href="KDRadioButton.html">KDRadioButton</a></li><li><a href="KDScript.html">KDScript</a></li><li><a href="KDSelector.html">KDSelector</a></li><li><a href="KDServerApp.html">KDServerApp</a></li><li><a href="KDServerBridge.html">KDServerBridge</a></li><li><a href="KDSpan.html">KDSpan</a></li><li><a href="KDStyles.html">KDStyles</a></li><li><a href="KDTerminalApp.html">KDTerminalApp</a></li><li><a href="KDText.html">KDText</a></li><li><a href="KDUser.html">KDUser</a></li><li><a href="KDVisualComponent.html">KDVisualComponent</a></li><li><a href="KDVisualContainerComponent.html">KDVisualContainerComponent</a></li><li><a href="KDWindow.html">KDWindow</a></li><li><a href="KDWindowManager.html">KDWindowManager</a></li></ul><h3>Global</h3><ul><li><a href="global.html#kdButton">kdButton</a></li><li><a href="global.html#kdCheckbox">kdCheckbox</a></li><li><a href="global.html#kdHidden">kdHidden</a></li><li><a href="global.html#kdKernel">kdKernel</a></li><li><a href="global.html#kdMessage">kdMessage</a></li><li><a href="global.html#kdRadioButton">kdRadioButton</a></li><li><a href="global.html#kdSelector">kdSelector</a></li><li><a href="global.html#kdText">kdText</a></li><li><a href="global.html#kdWindow">kdWindow</a></li><li><a href="global.html#kdWindowManagerInstance">kdWindowManagerInstance</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue May 10 2022 21:57:16 GMT-0400 (Venezuela Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sun Jun 26 2022 19:17:35 GMT-0400 (Venezuela Time)
 </footer>
 
 <script> prettyPrint(); </script>
