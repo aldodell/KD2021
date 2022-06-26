@@ -159,7 +159,7 @@ class KDObject {
 
 /**
  * Base class for KD components
- *  @extends KDObject
+ * @extends KDObject
  * @interface
  */
 class KDComponent extends KDObject {
@@ -490,6 +490,11 @@ class KDButton extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a button.
+ * @param {*} properties 
+ * @returns itself instance
+ */
 function kdButton(properties) {
     return new KDButton(properties);
 }
@@ -504,6 +509,11 @@ class KDHidden extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a hidden HTML element.
+ * @param {*} properties 
+ * @return itself instance
+ */
 function kdHidden(properties) {
     return new KDHidden(properties);
 }
@@ -521,7 +531,7 @@ class KDSelector extends KDVisualComponent {
 
     }
     /**
-     * 
+     * Set text and value fields names.
      * @param {*} text Name of field of data row wich will be show.
      * @param {*} value Name of field of data row wich will be getted with getValue
      */
@@ -532,7 +542,10 @@ class KDSelector extends KDVisualComponent {
     }
 
     /**
-     * Set data to be shown 
+     * Set data to be shown.
+     *
+     * @example 
+     * var data = [{text:"a", value:"0"},{text:"b", value:"1"} ]
      * @param {*} data is an array with key:value form.
      */
     setData(data) {
@@ -725,6 +738,10 @@ function kdLabel(properties) {
     return new KDLabel(properties);
 }
 
+/**
+ * Span HTML tag wrapper
+ * @extends KDVisualContainerComponent
+ */
 class KDSpan extends KDVisualContainerComponent {
     constructor(properties) {
         super(properties, "span");
@@ -743,6 +760,10 @@ class KDSpan extends KDVisualContainerComponent {
         return this.dom.innerHTML;
     }
 
+}
+
+function kdSpan(properties) {
+    return new KDSpan(properties);
 }
 
 class KDImage extends KDVisualComponent {
@@ -2382,13 +2403,13 @@ kdKernel
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="KDAlertApp.html">KDAlertApp</a></li><li><a href="KDApplication.html">KDApplication</a></li><li><a href="KDBase64.html">KDBase64</a></li><li><a href="KDButton.html">KDButton</a></li><li><a href="KDCheckbox.html">KDCheckbox</a></li><li><a href="KDDictionary.html">KDDictionary</a></li><li><a href="KDDropFileZone.html">KDDropFileZone</a></li><li><a href="KDEvalApp.html">KDEvalApp</a></li><li><a href="KDFile.html">KDFile</a></li><li><a href="KDHidden.html">KDHidden</a></li><li><a href="KDKernel.html">KDKernel</a></li><li><a href="KDLayer.html">KDLayer</a></li><li><a href="KDMessage.html">KDMessage</a></li><li><a href="KDRadioButton.html">KDRadioButton</a></li><li><a href="KDSelector.html">KDSelector</a></li><li><a href="KDServerApp.html">KDServerApp</a></li><li><a href="KDServerBridge.html">KDServerBridge</a></li><li><a href="KDStyles.html">KDStyles</a></li><li><a href="KDTerminalApp.html">KDTerminalApp</a></li><li><a href="KDText.html">KDText</a></li><li><a href="KDUser.html">KDUser</a></li><li><a href="KDVisualContainerComponent.html">KDVisualContainerComponent</a></li><li><a href="KDWindow.html">KDWindow</a></li><li><a href="KDWindowManager.html">KDWindowManager</a></li></ul><h3>Interfaces</h3><ul><li><a href="KDComponent.html">KDComponent</a></li><li><a href="KDObject.html">KDObject</a></li><li><a href="KDVisualComponent.html">KDVisualComponent</a></li></ul><h3>Global</h3><ul><li><a href="global.html#kdKernel">kdKernel</a></li><li><a href="global.html#kdMessage">kdMessage</a></li><li><a href="global.html#kdSelector">kdSelector</a></li><li><a href="global.html#kdWindow">kdWindow</a></li><li><a href="global.html#kdWindowManagerInstance">kdWindowManagerInstance</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="KDAlertApp.html">KDAlertApp</a></li><li><a href="KDApplication.html">KDApplication</a></li><li><a href="KDBase64.html">KDBase64</a></li><li><a href="KDButton.html">KDButton</a></li><li><a href="KDCheckbox.html">KDCheckbox</a></li><li><a href="KDDictionary.html">KDDictionary</a></li><li><a href="KDDropFileZone.html">KDDropFileZone</a></li><li><a href="KDEvalApp.html">KDEvalApp</a></li><li><a href="KDFile.html">KDFile</a></li><li><a href="KDHidden.html">KDHidden</a></li><li><a href="KDKernel.html">KDKernel</a></li><li><a href="KDLayer.html">KDLayer</a></li><li><a href="KDMessage.html">KDMessage</a></li><li><a href="KDRadioButton.html">KDRadioButton</a></li><li><a href="KDSelector.html">KDSelector</a></li><li><a href="KDServerApp.html">KDServerApp</a></li><li><a href="KDServerBridge.html">KDServerBridge</a></li><li><a href="KDSpan.html">KDSpan</a></li><li><a href="KDStyles.html">KDStyles</a></li><li><a href="KDTerminalApp.html">KDTerminalApp</a></li><li><a href="KDText.html">KDText</a></li><li><a href="KDUser.html">KDUser</a></li><li><a href="KDVisualContainerComponent.html">KDVisualContainerComponent</a></li><li><a href="KDWindow.html">KDWindow</a></li><li><a href="KDWindowManager.html">KDWindowManager</a></li></ul><h3>Interfaces</h3><ul><li><a href="KDComponent.html">KDComponent</a></li><li><a href="KDObject.html">KDObject</a></li><li><a href="KDVisualComponent.html">KDVisualComponent</a></li></ul><h3>Global</h3><ul><li><a href="global.html#kdButton">kdButton</a></li><li><a href="global.html#kdHidden">kdHidden</a></li><li><a href="global.html#kdKernel">kdKernel</a></li><li><a href="global.html#kdMessage">kdMessage</a></li><li><a href="global.html#kdSelector">kdSelector</a></li><li><a href="global.html#kdWindow">kdWindow</a></li><li><a href="global.html#kdWindowManagerInstance">kdWindowManagerInstance</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Sun May 08 2022 21:38:18 GMT-0400 (Venezuela Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.7</a> on Tue May 10 2022 21:57:16 GMT-0400 (Venezuela Time)
 </footer>
 
 <script> prettyPrint(); </script>

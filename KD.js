@@ -131,7 +131,7 @@ class KDObject {
 
 /**
  * Base class for KD components
- *  @extends KDObject
+ * @extends KDObject
  * @interface
  */
 class KDComponent extends KDObject {
@@ -462,6 +462,11 @@ class KDButton extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a button.
+ * @param {*} properties 
+ * @returns itself instance
+ */
 function kdButton(properties) {
     return new KDButton(properties);
 }
@@ -476,6 +481,11 @@ class KDHidden extends KDVisualComponent {
     }
 }
 
+/**
+ * Convenience method for create a hidden HTML element.
+ * @param {*} properties 
+ * @return itself instance
+ */
 function kdHidden(properties) {
     return new KDHidden(properties);
 }
@@ -493,7 +503,7 @@ class KDSelector extends KDVisualComponent {
 
     }
     /**
-     * 
+     * Set text and value fields names.
      * @param {*} text Name of field of data row wich will be show.
      * @param {*} value Name of field of data row wich will be getted with getValue
      */
@@ -504,7 +514,10 @@ class KDSelector extends KDVisualComponent {
     }
 
     /**
-     * Set data to be shown 
+     * Set data to be shown.
+     *
+     * @example 
+     * var data = [{text:"a", value:"0"},{text:"b", value:"1"} ]
      * @param {*} data is an array with key:value form.
      */
     setData(data) {
