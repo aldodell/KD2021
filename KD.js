@@ -1251,7 +1251,6 @@ class KDMessage extends KDObject {
         this.payload = payload;
         this.producer = producer;
         this.consumer = consumer;
-        let date = new Date();
         this.date = this.serialTime(new Date());
     }
 
@@ -1349,7 +1348,7 @@ class KDKernel extends KDObject {
         /**
          * Server URL string
          */
-        this.serverUrl = "server.php";
+        this.serverUrl = "server2022.php";
         this.messageSymbol = "m";
         this.currentUser = new KDUser();
         this.timeToReadMessages = 5000; //miliseconds
@@ -1979,52 +1978,92 @@ class KDServerApp extends KDApplication {
     /** Process messages  */
     processMessage(message) {
 
-        let tokens = message.getTokens();
-        if (tokens != undefined) {
+        let theKernel = this.kernel;
 
-            if (tokens.length >= 1) {
-                //If the message is for server
-                if (message.destination == this.id) {
+        //Message destination is SERVER
+        if (message.payload != undefined) {
 
-                    //get consumer
-                    let consumer = message.reducePayload();
+            //First token must be "request" or "answer".
+            //Request goes from local to server
+            //answer goes from server to local
 
-                    //get destination
-                    let destination = message.reducePayload();
+            let command = message.reducePayload();
+            let consumer = message.reducePayload();
 
-                    //assign
-                    message.consumer = consumer;
-                    message.destination = destination;
+            if (command == "request") {
+                // server request <consumer|any> other payloads words
+                let remoteMessage = kdMessage(command, message.payload, this.id, theKernel.currentUser.fullName(), consumer);
 
-                    //the producer is de current user logged
-                    message.producer = this.kernel.currentUser.fullName();
-                    message.origin = this.id;
-                    let theKernel = this.kernel;
+                theKernel.sendRemoteMessage(
+                    remoteMessage,
+                    //Process answer from server
+                    function (answer) {
+                        //alert(answer);
+                        try {
 
-                    //Send de message to server
-                    theKernel.sendRemoteMessage(
-                        message,
-                        //Process answer from server
-                        function (answer) {
-                            //alert(answer);
-                            try {
+                            //if answer is a JSON we can assume that is a message
+                            //let json = JSON.parse(answer);
+                            let m = new KDMessage();
+                            m.fromJson(answer);
 
-                                //if answer is a JSON we can assume that is a message
-                                let json = JSON.parse(answer);
-                                let m = new KDMessage();
-                                m.fromJson(answer);
+                            //Send the message locally
+                            theKernel.sendLocalMessage(m);
+                        } catch (error) {
+                            theKernel.print(error);
+                        }
 
-                                //Send the message locally
-                                theKernel.sendLocalMessage(m);
-                            } catch (error) {
-                                theKernel.print(error);
-                            }
-
-                        },
-                        theKernel.print
-                    )
-                }
+                    },
+                    theKernel.print
+                )
+            } else if (command == "answer") {
+                theKernel.print(message.payload);
             }
+
+            /*
+             if (tokens.length >= 1) {
+                 //If the message is for server
+                 if (message.destination == this.id) {
+ 
+                     //get consumer
+                     let consumer = message.reducePayload();
+ 
+                     //get destination
+                     let destination = message.reducePayload();
+ 
+                     //assign
+                     message.consumer = consumer;
+                     message.destination = destination;
+ 
+                     //the producer is de current user logged
+                     message.producer = this.kernel.currentUser.fullName();
+                     message.origin = this.id;
+                     let theKernel = this.kernel;
+ 
+                     //Send de message to server
+                     theKernel.sendRemoteMessage(
+                         message,
+                         //Process answer from server
+                         function (answer) {
+                             //alert(answer);
+                             try {
+ 
+                                 //if answer is a JSON we can assume that is a message
+                                 //let json = JSON.parse(answer);
+                                 let m = new KDMessage();
+                                 m.fromJson(answer);
+ 
+                                 //Send the message locally
+                                 theKernel.sendLocalMessage(m);
+                             } catch (error) {
+                                 theKernel.print(error);
+                             }
+ 
+                         },
+                         theKernel.print
+                     )
+                 }
+             }
+             */
         }
     }
 }
@@ -2201,8 +2240,6 @@ class KDTerminalApp extends KDApplication {
         this.input.dom.focus();
         this.window.body.dom.scrollTop = this.window.body.dom.scrollHeight;
     }
-
-
 
 
     processKey(e) {
