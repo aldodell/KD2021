@@ -5,7 +5,11 @@ include("kd2021.php");
  * KicsyDell Server
  * version 1.0 2021/July
  * 
+ * Basic use from KDTerminal: server any server ping
+ * 
  */
+
+
 
 $kdphp = new KDPHP();
 const messageSymbol = "m";
@@ -14,6 +18,7 @@ const serverVersion = "KD Server 1.0 (alpha) 2021\n";
 
 //Get request from user:
 $message = KDMessage::fromRequest(messageSymbol);
+
 //print_r($message);
 //die();
 
@@ -43,7 +48,6 @@ if ($message->destination == "server") {
             $qm = new KDMessagesQueue();
             $msgs = $qm->deleteMessage($m);
             break;
-
 
         case "create":
             //Create a new user
