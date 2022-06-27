@@ -3,6 +3,8 @@
 var kdId = 0;
 const KD_ALL = ".*";
 const KD_TOKENS = /[A-zÀ-ú\@\d\.\*\\]+/g;
+const KD_UP = "UP";
+const KD_DOWN = "DOWN";
 
 /**
  * Master object of KD API.
@@ -1243,14 +1245,16 @@ class KDMessage extends KDObject {
      * @param {String} origin Application wich had create the message
      * @param {String} producer User who created the message.
      * @param {String} consumer User who will receive the message.
+     * @param {String} direction Could be "UP"(from local to server), "DOWN" (from server to local). 
      */
-    constructor(destination, payload, origin, producer, consumer) {
+    constructor(destination, payload, origin, producer, consumer, direction) {
         super();
-        this.origin = origin;
-        this.destination = destination == null ? KD_ALL : destination;
-        this.payload = payload;
-        this.producer = producer;
-        this.consumer = consumer;
+        this.origin = (origin == null) ? "" : origin;
+        this.destination = (destination == null) ? KD_ALL : destination;
+        this.payload = (payload == null) ? "" : payload;
+        this.producer = (producer == null) ? "" : producer;
+        this.consumer = (consumer == null) ? "" : consumer;
+        this.direction = (direction == null) ? KD_UP : direction;
         this.date = this.serialTime(new Date());
     }
 
@@ -1319,10 +1323,12 @@ class KDMessage extends KDObject {
      * @param {String} origin Application wich had create the message
      * @param {String} producer User who created the message.
      * @param {String} consumer User who will receive the message.
+    * @param {String} direction Could be "UP"(from local to server), "DOWN" (from server to local). 
+   
  *   @returns a {@link KDMessage} object
  */
-function kdMessage(destination, payload, origin, producer, consumer) {
-    return new KDMessage(destination, payload, origin, producer, consumer);
+function kdMessage(destination, payload, origin, producer, consumer, direction) {
+    return new KDMessage(destination, payload, origin, producer, consumer, direction);
 }
 
 /**
@@ -1454,6 +1460,7 @@ class KDKernel extends KDObject {
      * @returns self reference.
      */
     sendLocalMessage(message) {
+        /*
         if (message.destination == this.id) {
             let tokens = message.getTokens();
             if (tokens[0] == "setUser") {
@@ -1461,12 +1468,15 @@ class KDKernel extends KDObject {
             }
 
         } else {
-            var re = new RegExp(message.destination);
-            this.applications.forEach(function (app) {
-                if (re.test(app.id))
-                    app.processMessage(message);
-            });
-        }
+            */
+        //var re = new RegExp(message.destination);
+        this.applications.forEach(function (app) {
+            // if (re.test(app.id))
+            if (app.id == message.destination) {
+                app.processMessage(message);
+            }
+        });
+        //  }
         return this;
     }
 
@@ -1488,7 +1498,7 @@ class KDKernel extends KDObject {
     /**
      * Check if an application is loaded.
      * @param {String} id 
-     * @returns 
+     * @returns {Boolean} if application exists.
      */
     constainsApplication(id) {
         for (let app of this.applications) {
@@ -1500,7 +1510,7 @@ class KDKernel extends KDObject {
     /**
      * Run an application by it id.
      * @param {String} id 
-     * @returns 
+     * @returns itself
      */
     runApplication(id) {
         for (let app of this.applications) {
@@ -1580,38 +1590,43 @@ class KDLoginApp extends KDApplication {
 
 
     processMessage(message) {
-        let tokens = message.getTokens();
-        let fullname = tokens[0];
-        let password = tokens[1];
-        let hashPassword = this.hash(password);
-        let m = kdMessage(
-            "server",
-            "login " + fullname + " " + hashPassword,
-            "KDLogin",
-            this.kernel.currentUser.fullName(),
-            this.kernel.currentUser.fullName()
-        );
-        var theKernel = this.kernel;
-        theKernel.sendRemoteMessage(
-            m,
-            function (answer) {
-                try {
-                    let json = JSON.parse(answer);
-                    let m = kdMessage();
-                    m.fromJson(answer);
-                    let tokens = m.getTokens();
-                    let fullName = tokens[1];
-                    let authorizedApplications = JSON.parse(m.payload.substr(tokens[0].length + tokens[1].length + 1));
-                    console.log(authorizedApplications);
-                    theKernel.currentUser = kdUser(fullName);
-                    theKernel.currentUser.authorizedApplications = authorizedApplications;
+        if (message.direction == KD_UP) {
+            let tokens = message.getTokens();
+            let fullname = tokens[0];
+            let password = tokens[1];
+            let hashPassword = this.hash(password);
+            let m = kdMessage(
+                "server",
+                "user_login " + fullname + " " + hashPassword,
+                "login",
+                this.kernel.currentUser.fullName(),
+                this.kernel.currentUser.fullName()
+            );
+            var theKernel = this.kernel;
+            theKernel.sendRemoteMessage(
+                m,
+                function (answer) {
+                    try {
+                        let m = kdMessage();
+                        m.fromJson(answer);
+                        let i = m.payload.indexOf(" ");
+                        let fullName = m.payload.substring(0, i);
+                        let s = m.payload.substring(i + 1).trim();
+                        var authorizedApplications = [];
+                        if (s.length > 0) {
+                            authorizedApplications = JSON.parse(s);
+                        }
+                        console.log(authorizedApplications);
+                        theKernel.currentUser = kdUser(fullName);
+                        theKernel.currentUser.authorizedApplications = authorizedApplications;
 
-                } catch (error) {
-                    theKernel.print(error);
+                    } catch (error) {
+                        theKernel.print(error);
+                    }
                 }
-            }
 
-        );
+            );
+        }
     }
 
 
@@ -1644,6 +1659,7 @@ class KDUser {
         this.name = o.name;
         this.organization = o.organization;
         this.authorizedApplications = o.authorizedApplications;
+        this.direction = o.direction;
         return this;
     }
 
@@ -1935,7 +1951,7 @@ class KDEvalApp extends KDApplication {
             } else {
                 var r = "";
                 try {
-                    r = " = " + eval(message.payload);
+                    r = "print " + eval(message.payload);
                     this.kernel.sendLocalMessage(kdMessage("terminal", r, "KDEval"));
                 } catch (error) {
                     this.kernel.sendLocalMessage(kdMessage("terminal", r, "Error:" + error));
@@ -1983,90 +1999,35 @@ class KDServerApp extends KDApplication {
         let theKernel = this.kernel;
 
         //Message destination is SERVER
-        if (message.payload != undefined) {
+        if (message.direction == KD_UP) {
+            let remoteMessage = kdMessage("server", message.payload, this.id, theKernel.currentUser.fullName());
+            remoteMessage.direction = KD_UP;
 
-            //First token must be "request" or "answer".
-            //Request goes from local to server
-            //answer goes from server to local
+            theKernel.sendRemoteMessage(
+                remoteMessage,
+                //Process answer from server
+                function (answer) {
+                    //alert(answer);
+                    try {
 
-            let command = message.reducePayload();
-            let consumer = message.reducePayload();
+                        //if answer is a JSON we can assume that is a message
+                        //let json = JSON.parse(answer);
+                        let m = new KDMessage();
+                        m.fromJson(answer);
 
-            if (command == "request") {
-                // server request <consumer|any> other payloads words
-                let remoteMessage = kdMessage(command, message.payload, this.id, theKernel.currentUser.fullName(), consumer);
+                        //Send the message locally
+                        theKernel.sendLocalMessage(m);
+                    } catch (error) {
+                        theKernel.print(error);
+                    }
 
-                theKernel.sendRemoteMessage(
-                    remoteMessage,
-                    //Process answer from server
-                    function (answer) {
-                        //alert(answer);
-                        try {
-
-                            //if answer is a JSON we can assume that is a message
-                            //let json = JSON.parse(answer);
-                            let m = new KDMessage();
-                            m.fromJson(answer);
-
-                            //Send the message locally
-                            theKernel.sendLocalMessage(m);
-                        } catch (error) {
-                            theKernel.print(error);
-                        }
-
-                    },
-                    theKernel.print
-                )
-            } else if (command == "answer") {
-                theKernel.print(message.payload);
-            }
-
-            /*
-             if (tokens.length >= 1) {
-                 //If the message is for server
-                 if (message.destination == this.id) {
- 
-                     //get consumer
-                     let consumer = message.reducePayload();
- 
-                     //get destination
-                     let destination = message.reducePayload();
- 
-                     //assign
-                     message.consumer = consumer;
-                     message.destination = destination;
- 
-                     //the producer is de current user logged
-                     message.producer = this.kernel.currentUser.fullName();
-                     message.origin = this.id;
-                     let theKernel = this.kernel;
- 
-                     //Send de message to server
-                     theKernel.sendRemoteMessage(
-                         message,
-                         //Process answer from server
-                         function (answer) {
-                             //alert(answer);
-                             try {
- 
-                                 //if answer is a JSON we can assume that is a message
-                                 //let json = JSON.parse(answer);
-                                 let m = new KDMessage();
-                                 m.fromJson(answer);
- 
-                                 //Send the message locally
-                                 theKernel.sendLocalMessage(m);
-                             } catch (error) {
-                                 theKernel.print(error);
-                             }
- 
-                         },
-                         theKernel.print
-                     )
-                 }
-             }
-             */
+                },
+                theKernel.print
+            )
+        } else { // direction == KD_DOWN;
+            theKernel.print(message.payload);
         }
+
     }
 }
 
@@ -2087,75 +2048,6 @@ class KDSerialTimeApp extends KDApplication {
         }
     }
 }
-
-
-/*
-class KDUserApp extends KDApplication {
-    constructor(kernel) {
-        super(kernel);
-        this.id = "user";
-    }
-
-    processMessage(message) {
-        if (message.destination == this.id) {
-            let tokens = message.getTokens();
-            let fullname = tokens[1];
-            let hashPassword = this.hash(tokens[2]);
-            let theKernel = this.kernel;
-
-            switch (tokens[0]) {
-                case "login":
-                    let ma = kdMessage("server",
-                        "login " + fullname + " " + hashPassword,
-                        this.id,
-                        "",
-                        ""
-                    );
-
-                    this.kernel.sendRemoteMessage(ma, function (answer) {
-                        let obj = JSON.parse(answer);
-                        if (obj.name) {
-                            let u = new KDUser();
-                            theKernel.currentUser = u.fromJson(answer);
-                            let m0 = kdMessage("terminal", "print User loaded!", this.id, theKernel.currentUser, theKernel.currentUser);
-                            let m1 = kdMessage("terminal", "setPrefix " + u.fullName(), this.id, theKernel.currentUser, theKernel.currentUser);
-                            theKernel.sendLocalMessage(m0);
-                            theKernel.sendLocalMessage(m1);
-                        } else {
-                            let m = new KDMessage();
-                            m = m.fromJson(answer);
-                            theKernel.sendLocalMessage(m);
-                        }
-                    });
-                    break;
-
-                case "create":
-                    let mb = kdMessage("server",
-                        "create user " + fullname + " " + hashPassword,
-                        this.id,
-                        "",
-                        ""
-                    );
-
-                    this.kernel.sendRemoteMessage(mb, function (answer) {
-                        let obj = JSON.parse(answer);
-                        if (obj.name) {
-                            let u = new KDUser();
-                            theKernel.currentUser = u.fromJson(answer);
-                            let m0 = kdMessage("terminal", "print user create!", this.id, theKernel.currentUser, theKernel.currentUser);
-                            theKernel.sendLocalMessage(m0);
-                        } else {
-                            let m = new KDMessage();
-                            m = m.fromJson(answer);
-                            theKernel.sendLocalMessage(m);
-                        }
-                    });
-                    break;
-            }
-        }
-    }
-}
-*/
 
 
 class KDHashApp extends KDApplication {
@@ -2268,6 +2160,7 @@ class KDTerminalApp extends KDApplication {
                     }
 
                     let m = kdMessage(dest, payload);
+                    m.direction = KD_UP;
                     ter.kernel.sendLocalMessage(m);
 
                     ter.input.setValue("");
@@ -2309,13 +2202,13 @@ class KDTerminalApp extends KDApplication {
     }
 
     processMessage(message) {
-
         if (message.destination == this.id || message.destination == "!") {
-            if (message.payload == undefined) {
+            if (message.payload == "") {
                 this.run();
             } else {
                 let tokens = message.getTokens();
-                switch (tokens[0]) {
+                let command = tokens[0];
+                switch (command) {
 
                     /* 
                     When a message was send to terminal and its first parameter is take

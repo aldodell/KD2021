@@ -30,6 +30,8 @@ use KDUser as GlobalKDUser;
 //Message symbol to retrieve
 const messageSymbol = "m";
 const serverVersion = "KD Server 2022 (1.0) beta";
+const KD_UP = "UP";
+const KD_DOWN = "DOWN";
 
 
 /**
@@ -44,6 +46,7 @@ class KDMessage
     public $producer;
     public $consumer;
     public $payload;
+    public $direction;
     public $date;
 
 
@@ -59,6 +62,7 @@ class KDMessage
         $message->producer = $obj["producer"];
         $message->consumer = $obj["consumer"];
         $message->payload = $obj["payload"];
+        $message->direction = $obj["direction"];
         $message->date = $obj["date"];
         return $message;
     }
@@ -81,7 +85,8 @@ class KDMessage
         $r->destination = $this->origin;
         $r->producer = $this->consumer;
         $r->consumer = $this->producer;
-        $r->payload = "answer $r->consumer $answer";
+        $r->direction = KD_DOWN;
+        $r->payload = $answer;
         $r->date =  date("YmdHisu");
         return $r;
     }
@@ -112,7 +117,7 @@ class KDUser
     public $name;
     public $organization;
     public $authorizedApplications = [];
-    public $passwordHash;
+    public $hashPassword;
     public $lastIndexMessage = 0;
 
 
@@ -130,11 +135,35 @@ class KDUser
         return "$this->name@$this->organization";
     }
 
+
+    public static function hash($text)
+    {
+        $b = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241];
+
+        for ($i = 0; $i < strlen($text); $i++) {
+            $c = ord(substr($text, $i, 1));
+            for ($j = 0; $j < count($b); $j++) {
+                $b[$j] *= $c;
+                $b[$j] %= 251;
+            }
+        }
+
+        $d = "";
+        foreach ($b as $e) {
+            $d .= dechex($e);
+        }
+
+        $e = substr($d, 0, 2);
+        $e = hexdec($e);
+        $e = $e % count($b);
+        return substr($d, $e, 16);
+    }
+
     function create($password)
     {
         $fullName = $this->fullName();
         $p = $this::usersPath . $fullName;
-        $this->passwordHash = hash("sha256", $password);
+        $this->hashPassword = $this::hash($password);
 
         if (!file_exists($p)) {
             return "Creating $fullName user.\n" . $this->save();
@@ -165,11 +194,9 @@ class KDUser
             $this->name = $obj->name;
             $this->organization = $obj->organization;
             $this->authorizedApplications = $obj->authorizedApplications;
+            $this->hashPassword = $obj->hashPassword;
         }
     }
-
-   
-
 }
 
 class KDMessagesManager
@@ -255,6 +282,7 @@ $command = $tokens[0];
 
 switch ($command) {
 
+    //server ping
     case "ping":
         echo $message->reply(serverVersion)->toString();
         break;
@@ -301,6 +329,21 @@ switch ($command) {
         }
 
         echo $message->reply($r)->toString();
+        break;
+
+    case "user_login":
+        $userFullName = $tokens[1];
+        $hashPassword = $tokens[2];
+        $user = new KDUser();
+        $user->load($userFullName);
+        $m = $message;
+
+        if ($user->hashPassword == $hashPassword) {
+            $m->destination = "login";
+            $m->payload = "$userFullName  " . implode(" ", $user->authorizedApplications);
+            echo $m->toString();
+        }
+
         break;
 
     case "getMessages":
