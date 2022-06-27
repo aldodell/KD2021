@@ -1,5 +1,7 @@
 <?php
 
+use KDMessage as GlobalKDMessage;
+use KDUser as GlobalKDUser;
 
 /**
  * KD Server 2002 version
@@ -7,6 +9,20 @@
  * Notes:
  * 1. Messages send to client must have "answer" word at first payload terms to show on
  * UI app like terminal
+ * 
+ * Uses:
+ * 
+ * 
+ * 1. Ping with server, on terminal: 
+ * server request any ping.
+ *      "any" is de consumer. 
+ * 
+ * 2. Create a user, on terminal:
+ *  server request any user_create user@organization password
+ * 
+ * 3. Authorizing an user to use some application: 
+ * server request any user_authorize_application user@organization theApp
+ * 
  * 
  * 
  * 
@@ -22,6 +38,7 @@ const serverVersion = "KD Server 2022 (1.0) beta";
 class KDMessage
 {
 
+    const prefix = "m_";
     public $origin;
     public $destination;
     public $producer;
@@ -57,14 +74,14 @@ class KDMessage
     /**
      * @return KDMessage when origin and destination are switches, and consumer and producer as well.
      */
-    function reply()
+    function reply($answer)
     {
         $r = new KDMessage();
         $r->origin = $this->destination;
         $r->destination = $this->origin;
         $r->producer = $this->consumer;
         $r->consumer = $this->producer;
-        $r->payload = "";
+        $r->payload = "answer $r->consumer $answer";
         $r->date =  date("YmdHisu");
         return $r;
     }
@@ -73,6 +90,14 @@ class KDMessage
     {
         $r = json_encode($this);
         return $r;
+    }
+
+    function save()
+    {
+        $fileName = $this::prefix . $this->date;
+        $context = stream_context_create();
+        file_put_contents($fileName, $this->toString(), 0, $context);
+        return "The user $fileName was saved successfully.";
     }
 }
 
@@ -86,7 +111,9 @@ class KDUser
     const usersPath = "users/";
     public $name;
     public $organization;
-    public $authorizedApplications;
+    public $authorizedApplications = [];
+    public $passwordHash;
+    public $lastIndexMessage = 0;
 
 
     /**
@@ -103,12 +130,14 @@ class KDUser
         return "$this->name@$this->organization";
     }
 
-    function create()
+    function create($password)
     {
         $fullName = $this->fullName();
         $p = $this::usersPath . $fullName;
+        $this->passwordHash = hash("sha256", $password);
+
         if (!file_exists($p)) {
-            $this->save();
+            return "Creating $fullName user.\n" . $this->save();
         } else {
             throw new Exception("Error The user $fullName exists.");
         }
@@ -138,14 +167,78 @@ class KDUser
             $this->authorizedApplications = $obj->authorizedApplications;
         }
     }
+
+   
+
 }
 
+class KDMessagesManager
+{
+    const path = "messages/";
+    public $lastId = 0;
+
+    function indexFileName()
+    {
+        return $this::path . "index";
+    }
+
+    /**
+     * Build this class, and create index file on messasges path.
+     */
+    function __construct()
+    {
+        $f = $this->indexFileName();
+
+        //if index does not exists create it.
+        if (!file_exists($f)) {
+            file_put_contents($f, "0");
+        } else {
+            $this->lastId = (int)file_get_contents($f);
+        }
+    }
 
 
+    /**
+     * Get all messages starting at parameter index for a user, or for all if user are any
+     */
+    function getMessages($startingId)
+    {
+        $index = (int)$startingId;
+    }
+
+    function getLastIndex()
+    {
+
+        return (int)file_get_contents($this->indexFileName());
+    }
+
+    /**
+     * Increment last index message
+     * @return last index before increment
+     */
+    function incrementLastIndex()
+    {
+        $i = $this->getLastIndex();
+        file_put_contents($this->indexFileName(), $i + 1);
+        return $i;
+    }
+
+    /**
+     * Put a message into queue
+     */
+    function put($message)
+    {
+        $i = $this->incrementLastIndex(); //Get current index and increment it
+        $fileName = $this::path . KDMessage::prefix  . $i . "_" . $message->consumer;
+        file_put_contents($fileName, $message->toString());
+    }
+}
 
 /**
  * PROCCESSING AREA
  */
+
+$messageManager = new KDMessagesManager();
 
 //Get message as string from post request
 $json = $_POST[messageSymbol];
@@ -163,43 +256,54 @@ $command = $tokens[0];
 switch ($command) {
 
     case "ping":
-        $m = $message->reply();
-        $m->origin = "server";
-        $m->payload = "answer " . serverVersion;
-        echo $m->toString();
+        echo $message->reply(serverVersion)->toString();
         break;
 
+        /**
+         * Order from terminal:
+         * server request producer put destination payload 
+         */
+        //server request person@org put Hello world! This is a test.
+    case "put":
+        $m = $message;
+        $m->destination = $tokens[1];
+        $m->payload = substr($message->payload, strlen($command) + strlen($m->destination) + 2);
+        $messageManager->put($m);
+        break;
+
+        /**
+         * server request some@body user_create user@org password
+         */
     case "user_create":
         $user = new KDUser();
         $user->fullName($tokens[1]);
         $r = "";
         try {
-            $r = $user->create();
+            $r = $user->create($tokens[2]);
         } catch (Exception $ex) {
             $r = $ex->getMessage();
         }
-        $m = $message->reply();
-        $m->origin = "server";
-        $m->payload = "answer $r";
-        echo $m->toString();
-
+        echo $message->reply($r)->toString();
         break;
 
     case "user_authorize_application":
         $user = new KDUser();
+        $userFullName = $tokens[1];
+        $app = $tokens[2];
         $r = "";
         try {
-            $r = $user->load($tokens[1]);
-            $user->authorizedApplications[] = $tokens[2];
+            $user->load($userFullName);
+            $user->authorizedApplications[] = $app;
             $user->save();
+            $r = "The user $userFullName was grated with $app permission.";
         } catch (Exception $ex) {
             $r = $ex->getMessage();
         }
 
-        $m = $message->reply();
-        $m->origin = "server";
-        $m->payload = "answer $r";
-        echo $m->toString();
+        echo $message->reply($r)->toString();
+        break;
+
+    case "getMessages":
 
         break;
 }

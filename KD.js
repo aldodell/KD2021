@@ -1407,7 +1407,8 @@ class KDKernel extends KDObject {
     }
 
     /** 
-     * Run all applications
+     * Start loop to retrieve messages from server.
+     * Send "getMessages" payload command to server
      *  */
     initialize() {
         var thisKernel = this;
@@ -1932,8 +1933,9 @@ class KDEvalApp extends KDApplication {
             if (message.payload == "") {
                 this.kernel.sendLocalMessage(kdMessage("terminal", "release", "KDEval"));
             } else {
+                var r = "";
                 try {
-                    let r = " = " + eval(message.payload);
+                    r = " = " + eval(message.payload);
                     this.kernel.sendLocalMessage(kdMessage("terminal", r, "KDEval"));
                 } catch (error) {
                     this.kernel.sendLocalMessage(kdMessage("terminal", r, "Error:" + error));
