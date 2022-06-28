@@ -282,7 +282,7 @@ $command = $tokens[0];
 
 switch ($command) {
 
-    //server ping
+        //server ping
     case "ping":
         echo $message->reply(serverVersion)->toString();
         break;
@@ -337,13 +337,17 @@ switch ($command) {
         $user = new KDUser();
         $user->load($userFullName);
         $m = $message;
+        $m->direction = KD_DOWN;
 
         if ($user->hashPassword == $hashPassword) {
             $m->destination = "login";
             $m->payload = "$userFullName  " . implode(" ", $user->authorizedApplications);
-            echo $m->toString();
+        } else {
+            $m->destination = "server";
+            $m->payload = "The user $userFullName  does not exits or password are wrong!";
         }
-
+        
+        echo $m->toString();
         break;
 
     case "getMessages":

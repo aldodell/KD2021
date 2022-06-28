@@ -1289,6 +1289,7 @@ class KDMessage extends KDObject {
         this.payload = o.payload;
         this.producer = o.producer;
         this.consumer = o.consumer;
+        this.direction = o.direction;
         this.date = o.date;
         return this;
     }
@@ -1588,8 +1589,29 @@ class KDLoginApp extends KDApplication {
         this.id = "login";
     }
 
+    processAnswer(answer) {
 
+        try {
+            let m = kdMessage();
+            m.fromJson(answer);
+            let i = m.payload.indexOf(" ");
+            let fullName = m.payload.substring(0, i);
+            let s = m.payload.substring(i + 1).trim();
+            var authorizedApplications = [];
+            if (s.length > 0) {
+                authorizedApplications = JSON.parse(s);
+            }
+            console.log(authorizedApplications);
+            this.kernel.currentUser = kdUser(fullName);
+            this.kernel.currentUser.authorizedApplications = authorizedApplications;
+
+        } catch (error) {
+            this.kernel.print(error);
+        }
+    }
     processMessage(message) {
+
+        //When user request login by terminal
         if (message.direction == KD_UP) {
             let tokens = message.getTokens();
             let fullname = tokens[0];
@@ -1602,30 +1624,18 @@ class KDLoginApp extends KDApplication {
                 this.kernel.currentUser.fullName(),
                 this.kernel.currentUser.fullName()
             );
-            var theKernel = this.kernel;
-            theKernel.sendRemoteMessage(
+            let app = this;
+            this.kernel.sendRemoteMessage(
                 m,
                 function (answer) {
-                    try {
-                        let m = kdMessage();
-                        m.fromJson(answer);
-                        let i = m.payload.indexOf(" ");
-                        let fullName = m.payload.substring(0, i);
-                        let s = m.payload.substring(i + 1).trim();
-                        var authorizedApplications = [];
-                        if (s.length > 0) {
-                            authorizedApplications = JSON.parse(s);
-                        }
-                        console.log(authorizedApplications);
-                        theKernel.currentUser = kdUser(fullName);
-                        theKernel.currentUser.authorizedApplications = authorizedApplications;
-
-                    } catch (error) {
-                        theKernel.print(error);
-                    }
+                    app.processAnswer(answer);
                 }
-
             );
+        } else {
+            //let m = kdMessage("terminal", "print Do no attempt to login directly by server call. Please use KDLoginApp instead.", "server", "some", "some", KD_DOWN);
+            //this.kernel.sendLocalMessage(m);
+            //Process answer from server
+            this.processAnswer(message);
         }
     }
 
@@ -2011,7 +2021,6 @@ class KDServerApp extends KDApplication {
                     try {
 
                         //if answer is a JSON we can assume that is a message
-                        //let json = JSON.parse(answer);
                         let m = new KDMessage();
                         m.fromJson(answer);
 
