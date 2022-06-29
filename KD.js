@@ -1318,16 +1318,15 @@ class KDMessage extends KDObject {
 }
 
 /**
- * Functional {@link KDMessage} builder
-  * @param {String} destination Application wich will receive message
-     * @param {String} payload Data to be send
-     * @param {String} origin Application wich had create the message
-     * @param {String} producer User who created the message.
-     * @param {String} consumer User who will receive the message.
-    * @param {String} direction Could be "UP"(from local to server), "DOWN" (from server to local). 
-   
- *   @returns a {@link KDMessage} object
- */
+* Functional {@link KDMessage} builder
+* @param {String} destination Application wich will receive message
+* @param {String} payload Data to be send
+* @param {String} origin Application wich had create the message
+* @param {String} producer User who created the message.
+* @param {String} consumer User who will receive the message.
+* @param {String} direction Could be "UP"(from local to server), "DOWN" (from server to local). 
+* @returns a {@link KDMessage} object
+*/
 function kdMessage(destination, payload, origin, producer, consumer, direction) {
     return new KDMessage(destination, payload, origin, producer, consumer, direction);
 }

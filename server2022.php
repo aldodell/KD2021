@@ -250,16 +250,42 @@ class KDMessagesManager
         return $i;
     }
 
+    static function buildFilenameMessage($index, $owner)
+    {
+        return KDMessagesManager::path . KDMessage::prefix  . $index . "_" . $owner;
+    }
+
     /**
      * Put a message into queue
      */
     function put($message)
     {
         $i = $this->incrementLastIndex(); //Get current index and increment it
-        $fileName = $this::path . KDMessage::prefix  . $i . "_" . $message->consumer;
+        $fileName = $this::buildFilenameMessage($i, $message->consumer);
         file_put_contents($fileName, $message->toString());
     }
+
+    /**
+     * Retrieve a list of messages for an user and startingAt id.
+     */
+    function getMessagesOf($userFullName, $startingAt)
+    {
+        $result = [];
+        $user = new KDUser();
+        $user->load($userFullName);
+        $i = $startingAt;
+
+        $files = array_diff(scandir($this::path), array('..', '.', '.DS_Store', 'index'));
+        foreach ($files as $file) {
+            if (strpos($file, $userFullName) > 0) {
+                $result[] = $file;
+            }
+        }
+        return $result;
+    }
 }
+
+
 
 /**
  * PROCCESSING AREA
@@ -289,13 +315,15 @@ switch ($command) {
 
         /**
          * Order from terminal:
-         * server request producer put destination payload 
+         * server put destination consumer payload
+         * 
          */
         //server request person@org put Hello world! This is a test.
     case "put":
         $m = $message;
         $m->destination = $tokens[1];
-        $m->payload = substr($message->payload, strlen($command) + strlen($m->destination) + 2);
+        $m->consumer = $tokens[2];
+        $m->payload = substr($message->payload, strlen($command) + strlen($m->destination)  + strlen($m->consumer) + 3);
         $messageManager->put($m);
         break;
 
@@ -344,13 +372,18 @@ switch ($command) {
             $m->payload = "$userFullName  " . implode(" ", $user->authorizedApplications);
         } else {
             $m->destination = "server";
-            $m->payload = "The user $userFullName  does not exits or password are wrong!";
+            $m->payload = "The user $userFullName does not exits or password are wrong!";
         }
-        
+
         echo $m->toString();
         break;
 
     case "getMessages":
+        $userFullName = $tokens[1];
+        $user = new KDUser();
+        $user->load($userFullName);
+        print_r($messageManager->getMessagesOf($userFullName, 0));
+
 
         break;
 }
